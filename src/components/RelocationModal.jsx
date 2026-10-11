@@ -1,4 +1,5 @@
-import { formatClock } from '../utils/format';
+
+import {formatClock, formatDateTime } from '../utils/format';
 
 const SIZE_LABEL = { small: 'เล็ก', medium: 'กลาง', large: 'ใหญ่' };
 
@@ -19,6 +20,8 @@ export default function RelocationModal({
   if (!state) return null;
   const { booking, step, options, loading, busy, msg, selectedId, result } = state;
 
+  const notStartedYet = new Date(booking.start_time).getTime() > Date.now(); // แจ้งล่วงหน้า ยังไม่ถึงเวลาเริ่มของเรา
+
   return (
     <div className="overlay show" role="dialog" aria-modal="true" aria-labelledby="relocation-title">
       <div className="modal relocation-modal">
@@ -27,8 +30,15 @@ export default function RelocationModal({
             <div className="reloc-icon" aria-hidden="true">!</div>
             <h3 id="relocation-title">ตู้ {booking.locker_number} ยังมีของผู้ใช้ก่อนหน้า</h3>
             <p>
+
+              {notStartedYet
+                ? `การจองของคุณจะเริ่ม ${formatDateTime(booking.start_time)} แต่ผู้ใช้คนก่อนยังไม่ได้นำของออกและเลยเวลาที่กำหนดไว้แล้ว อาจใช้ตู้นี้ไม่ได้ตามเวลา `
+                : 'ถึงเวลาจองของคุณแล้ว แต่ผู้ใช้คนก่อนยังไม่ได้นำของออกและเลยเวลาที่กำหนดไว้ ตอนนี้จึงยังใช้ตู้นี้ไม่ได้ '}
+              ต้องการใช้ตู้อื่นแทนหรือไม่?
+
               ถึงเวลาจองของคุณแล้ว แต่ผู้ใช้คนก่อนยังไม่ได้นำของออกและเลยเวลาที่กำหนดไว้
               ตอนนี้จึงยังใช้ตู้นี้ไม่ได้ ต้องการใช้ตู้อื่นแทนหรือไม่?
+
             </p>
             <div className="modal-actions">
               <button className="btn ghost" onClick={onAskDecline}>ไม่ต้องการ</button>
@@ -41,6 +51,7 @@ export default function RelocationModal({
           <>
             <h3 id="relocation-title">เลือกตู้ใหม่</h3>
             <p>
+              แสดงเฉพาะตู้ที่ยังไม่มีผู้ใช้ ขนาดเท่าเดิมหรือเล็กกว่า (ไม่ต้องจ่ายเพิ่ม) · ระยะเวลาและ PIN เดิม · {notStartedYet ? 'เริ่มตามเวลาจองเดิม' : 'เริ่มนับตั้งแต่ตอนนี้'}
               แสดงเฉพาะตู้ที่ยังไม่มีผู้ใช้ ขนาดเท่าเดิมหรือเล็กกว่า (ไม่ต้องจ่ายเพิ่ม) · ระยะเวลาและ PIN เดิม · เริ่มนับตั้งแต่ตอนนี้
             </p>
             {loading ? (

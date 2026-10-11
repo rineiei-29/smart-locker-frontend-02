@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { getJSON, putJSON } from '../api';
 import { formatDateTime, formatFullDateTime, formatClock } from '../utils/format';
+import RevenuePanel from '../components/RevenuePanel';
 
 const ACTION_LABEL = { book: 'จองตู้', open: 'ปลดล็อกตู้', close: 'คืนตู้', wrong_pin: 'กรอก PIN ผิด', admin_release: 'Admin ปล่อยตู้', relocate: 'ย้ายตู้', decline_relocate: 'ปฏิเสธย้ายตู้ (ยกเลิกจอง)' };
 // สถานะที่คำนวณสดจากตารางการจอง (แสดงในคอลัมน์ "สถานะ")
@@ -38,6 +39,7 @@ const TABS = [
   { key: 'allbookings', label: 'การจองทั้งหมด' },
   { key: 'users', label: 'จัดการผู้ใช้งาน' },
   { key: 'lockers', label: 'จัดการตู้ล็อกเกอร์' },
+  { key: 'revenue', label: 'ประวัติรายได้' },
   { key: 'reports', label: 'รายงานสรุป' },
 ];
 
@@ -690,6 +692,11 @@ export default function AdminPage() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* ===== แท็บ: ประวัติรายได้ ===== */}
+      <div className={`tab-panel ${activeTab === 'revenue' ? 'active' : ''}`}>
+        <RevenuePanel adminId={currentUser.user_id} active={activeTab === 'revenue'} />
       </div>
 
       {/* ===== 5. แท็บ: รายงานสรุปและรายได้ ===== */}

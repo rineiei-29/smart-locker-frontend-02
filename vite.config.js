@@ -20,6 +20,10 @@ export default defineConfig({
       '/reports': 'http://localhost:5000',
       '/dashboard': 'http://localhost:5000',
       '/verify-pin': 'http://localhost:5000',
+      '/my-history': 'http://localhost:5000',
+      // ระบุเป็น path เฉพาะ ไม่ใช้ '/admin' เฉย ๆ เพราะ /admin เป็นหน้าเว็บของ frontend เอง
+      '/admin/lockers': 'http://localhost:5000',
+      '/admin/revenue': 'http://localhost:5000',
     },
   },
 })

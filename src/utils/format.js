@@ -51,3 +51,19 @@ export function formatElapsed(startStr) {
   if (hours === 0) return `${minutes} นาที`;
   return `${hours} ชม. ${minutes} นาที`;
 }
+
+// แสดงจำนวนเงินเป็นบาท เช่น 1,250 บาท
+export function formatBaht(amount) {
+  return `${Number(amount || 0).toLocaleString('th-TH')} บาท`;
+}
+
+// วันที่+เวลาแบบเต็มที่อ่านง่ายเสมอ (ไม่ย่อเป็นแค่เวลาเมื่อเป็นวันนี้) เช่น "9 ต.ค. 14:30 น."
+export function formatDateTimeFull(dateStr) {
+  if (!dateStr) return '–';
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return '–';
+  return (
+    d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit', timeZone: 'Asia/Bangkok' }) +
+    ' ' + formatClock(dateStr)
+  );
+}

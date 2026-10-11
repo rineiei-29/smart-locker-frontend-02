@@ -13,6 +13,10 @@ import {
 } from '../utils/time';
 import RelocationModal from '../components/RelocationModal';
 
+import UserHistory from '../components/UserHistory';
+
+
+
 // ป้ายกำกับขนาดตู้ภาษาไทย
 const SIZE_LABEL = { small: 'เล็ก', medium: 'กลาง', large: 'ใหญ่' };
 
@@ -153,6 +157,18 @@ const BOOKING_FILTERS = [
 // กำลังใช้งาน = ถึงเวลาแล้วและใช้ตู้ได้ (รวมเกินเวลา) / ที่เหลือคือจองไว้รอใช้ (รวมกรณีถึงเวลาแต่ตู้ยังไม่ว่าง)
 function phaseGroup(phase) {
   return phase === 'active' || phase === 'overdue' ? 'using' : 'booked';
+
+}
+
+function IconHistory(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+      <path d="M3 3v5h5" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  );
+
 }
 
 function bookingPhase(b) {
@@ -952,53 +968,71 @@ export default function HomePage() {
           </div>
         </header>
 
-        {/* เนื้อหาภายในหน้าเว็บ (Main Body) */}
-        <main className="main-body">
-          {/* กรณีที่ยังไม่ได้เข้าสู่ระบบ ให้แสดงกล่องเข้าสู่ระบบ / สมัครสมาชิก */}
-          {!currentUser && (
-            <div className="panel">
-              <h2>{isRegisterMode ? 'สมัครสมาชิกใหม่' : 'เข้าสู่ระบบเพื่อจองตู้'}</h2>
-              <div className="form-row">
+      <div className="panel">
+        {!currentUser ? (
+          <div>
+            <h2>{isRegisterMode ? 'สมัครสมาชิกใหม่' : 'เข้าสู่ระบบเพื่อจองตู้'}</h2>
+            <div className="form-row">
+              <input
+                type="text"
+                placeholder="ชื่อผู้ใช้ (username)"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+              <input
+                type="password"
+                placeholder="รหัสผ่าน"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            {isRegisterMode && (
+              <div className="form-row" style={{ marginTop: 10 }}>
                 <input
                   type="text"
-                  placeholder="ชื่อผู้ใช้ (username)"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="ชื่อจริง"
+                  value={firstname}
+                  onChange={(e) => setFirstname(e.target.value)}
                 />
                 <input
-                  type="password"
-                  placeholder="รหัสผ่าน"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  type="text"
+                  placeholder="นามสกุล"
+                  value={lastname}
+                  onChange={(e) => setLastname(e.target.value)}
                 />
               </div>
-              {isRegisterMode && (
-                <div className="form-row" style={{ marginTop: 10 }}>
-                  <input
-                    type="text"
-                    placeholder="ชื่อจริง"
-                    value={firstname}
-                    onChange={(e) => setFirstname(e.target.value)}
-                  />
-                  <input
-                    type="text"
-                    placeholder="นามสกุล"
-                    value={lastname}
-                    onChange={(e) => setLastname(e.target.value)}
-                  />
-                </div>
-              )}
-              <div className="form-row" style={{ marginTop: 14, display: 'block' }}>
-                <button className="btn primary" style={{ width: '100%' }} onClick={handleSubmit}>
-                  {isRegisterMode ? 'สมัครสมาชิก' : 'เข้าสู่ระบบ'}
-                </button>
-              </div>
-              <button className="toggle-link" onClick={handleToggleMode}>
-                {isRegisterMode ? 'มีบัญชีอยู่แล้ว? เข้าสู่ระบบ' : 'ยังไม่มีบัญชี? สมัครสมาชิก'}
+            )}
+            <div className="form-row" style={{ marginTop: 14, display: 'block' }}>
+              <button className="btn primary" style={{ width: '100%' }} onClick={handleSubmit}>
+                {isRegisterMode ? 'สมัครสมาชิก' : 'เข้าสู่ระบบ'}
               </button>
-              {authMsg && <div className={`msg ${authMsg.type}`}>{authMsg.text}</div>}
             </div>
-          )}
+            <button className="toggle-link" onClick={handleToggleMode}>
+              {isRegisterMode ? 'มีบัญชีอยู่แล้ว? เข้าสู่ระบบ' : 'ยังไม่มีบัญชี? สมัครสมาชิก'}
+            </button>
+            {authMsg && <div className={`msg ${authMsg.type}`}>{authMsg.text}</div>}
+          </div>
+        ) : (
+          <div className="account-row">
+            <div className="account-info">
+              เข้าสู่ระบบเป็น <b>{currentUser.firstname} {currentUser.lastname}</b>
+              <span className="role">{currentUser.role}</span>
+            </div>
+            <button className="btn ghost" onClick={handleLogout}>ออกจากระบบ</button>
+          </div>
+        )}
+      </div>
+
+      {currentUser && (
+        <div className="tabs page-tabs" role="tablist">
+          <button role="tab" aria-selected={page === 'all'} className={`tab-btn ${page === 'all' ? 'active' : ''}`} onClick={() => setPage('all')}>
+            ตู้ทั้งหมด
+          </button>
+          <button role="tab" aria-selected={page === 'mine'} className={`tab-btn ${page === 'mine' ? 'active' : ''}`} onClick={() => setPage('mine')}>
+            ตู้ของฉัน{myBookings.length > 0 && <span className="tab-count">{myBookings.length}</span>}
+          </button>
+        </div>
+      )}
 
       {page === 'all' && (<>
       <div className="stats">
@@ -1224,7 +1258,12 @@ export default function HomePage() {
                           </span>
                         ) : phase === 'waiting' ? (
                           <span style={{ color: 'var(--danger)', fontSize: 12 }}>
+
+                            {new Date(b.start_time).getTime() > Date.now()
+                              ? 'ผู้ใช้คนก่อนยังไม่นำของออกและเลยเวลาแล้ว · อาจใช้ตู้นี้ไม่ได้ตามเวลาที่จอง'
+                              : 'ถึงเวลาของคุณแล้ว แต่ผู้ใช้คนก่อนยังไม่นำของออก · ยังเปิดตู้นี้ไม่ได้'}
                             ถึงเวลาของคุณแล้ว แต่ผู้ใช้คนก่อนยังไม่นำของออก · ยังเปิดตู้นี้ไม่ได้
+
                           </span>
                         ) : phase === 'overdue' ? (
                           <span style={{ color: 'var(--danger)', fontSize: 12 }}>
@@ -1266,6 +1305,10 @@ export default function HomePage() {
       </div>
 
       </>)}
+
+
+      {page === 'history' && currentUser && <UserHistory user={currentUser} active={page === 'history'} />}
+
 
       {/* ==================================================================
           ส่วนแสดงผล: ประวัติการใช้งาน (Usage History View)
@@ -1373,14 +1416,6 @@ export default function HomePage() {
           onClick={() => { setPage('mine'); window.scrollTo({ top: 0 }); }}
         >
           <IconTicket /> ตู้ของฉัน
-        </button>
-        <button
-          type="button"
-          className={page === 'history' ? 'active' : ''}
-          disabled={!currentUser}
-          onClick={() => { setPage('history'); loadMyLogs(); window.scrollTo({ top: 0 }); }}
-        >
-          <IconHistory /> ประวัติ
         </button>
       </nav>
     </div>
