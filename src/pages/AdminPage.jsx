@@ -49,7 +49,11 @@ function loadStoredUser() {
   }
 }
 
-// ---------------- icons (inline, no external deps) ----------------
+// ==================================================================
+// ไอคอน SVG แบบ Inline สำหรับหน้าผู้ดูแลระบบ
+// ==================================================================
+
+// ไอคอนหน้าหลัก
 function IconHome(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -58,6 +62,8 @@ function IconHome(props) {
     </svg>
   );
 }
+
+// ไอคอนรีเฟรชข้อมูล
 function IconRefresh(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -65,6 +71,96 @@ function IconRefresh(props) {
       <path d="M21 3v5h-5" />
       <path d="M21 12a9 9 0 0 1-15.4 6.4L3 16" />
       <path d="M3 21v-5h5" />
+    </svg>
+  );
+}
+
+// ไอคอนเปิด-ปิดเมนูแถบข้าง (Hamburger Menu 3 ขีด)
+function IconMenu(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <line x1="3" y1="12" x2="21" y2="12" />
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <line x1="3" y1="18" x2="21" y2="18" />
+    </svg>
+  );
+}
+
+// ไอคอนปิด / กากบาท
+function IconClose(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
+// ไอคอนประวัติการใช้งาน
+function IconHistory(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <polyline points="12 7 12 12 15 15" />
+      <path d="M3.05 11a9 9 0 0 1 .5-2" />
+    </svg>
+  );
+}
+
+// ไอคอนการจองตู้
+function IconTicket(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1a2 2 0 0 0 0 4v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1a2 2 0 0 0 0-4Z" />
+      <path d="M13 5v2M13 17v2M13 10.5v3" />
+    </svg>
+  );
+}
+
+// ไอคอนจัดการผู้ใช้งาน
+function IconUsers(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+
+// ไอคอนจัดการตู้ล็อกเกอร์
+function IconLockers(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="3" y="3" width="8" height="8" rx="1.5" />
+      <rect x="13" y="3" width="8" height="8" rx="1.5" />
+      <rect x="3" y="13" width="8" height="8" rx="1.5" />
+      <rect x="13" y="13" width="8" height="8" rx="1.5" />
+    </svg>
+  );
+}
+
+// ไอคอนรายงานสรุปและรายได้
+function IconReport(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" y1="13" x2="8" y2="13" />
+      <line x1="16" y1="17" x2="8" y2="17" />
+      <polyline points="10 9 9 9 8 9" />
+    </svg>
+  );
+}
+
+// ไอคอนออกจากระบบ
+function IconLogout(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <polyline points="16 17 21 12 16 7" />
+      <line x1="21" y1="12" x2="9" y2="12" />
     </svg>
   );
 }
@@ -80,6 +176,10 @@ export default function AdminPage() {
     window.location.replace('/');
   }
 
+  // สถานะเปิด-ปิดแถบเมนูด้านซ้าย (ค่าเริ่มต้น: เปิดไว้)
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // แท็บเมนูปัจจุบัน
   const [activeTab, setActiveTab] = useState('logs');
 
   const [dashboard, setDashboard] = useState({});
@@ -102,6 +202,7 @@ export default function AdminPage() {
   const [reportPeriod, setReportPeriod] = useState('daily');
   const [reports, setReports] = useState([]);
   const [reportsError, setReportsError] = useState(false);
+  const [reportRevenueSummary, setReportRevenueSummary] = useState(null); // สรุปรายได้จาก backend
 
   const loadDashboard = useCallback(async () => {
     const json = await getJSON('/dashboard');
@@ -140,7 +241,7 @@ export default function AdminPage() {
 
   const loadLockers = useCallback(async () => {
     try {
-      const json = await getJSON('/admin/lockers');
+      const json = await getJSON('/lockers');
       setLockers(json.data || []);
       setLockersError(false);
     } catch {
@@ -148,10 +249,14 @@ export default function AdminPage() {
     }
   }, []);
 
+  // ดึงข้อมูลรายงานสรุป (และยอดรายได้) ตามช่วงเวลา
   const loadReports = useCallback(async (period) => {
     try {
       const json = await getJSON('/reports?period=' + period);
       setReports(json.data || []);
+      if (json.revenue_summary) {
+        setReportRevenueSummary(json.revenue_summary);
+      }
       setReportsError(false);
     } catch {
       setReportsError(true);
@@ -214,6 +319,39 @@ export default function AdminPage() {
     return rows;
   }, [allLogs, filterAction, filterSearch]);
 
+  // คำนวณสรุปยอดรายได้ทั้งหมด: รายวัน (วันนี้), รายเดือน (เดือนนี้), รายปี (ปีนี้), และยอดรวมทั้งหมด
+  const revenueSummary = useMemo(() => {
+    if (reportRevenueSummary && reportRevenueSummary.total_revenue != null) {
+      return reportRevenueSummary;
+    }
+    // คำนวณสดจากรายการ bookings ทั้งหมด (กรณีที่ backend ยังไม่ได้ส่งมา)
+    const now = new Date();
+    const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+    const monthStr = todayStr.slice(0, 7);
+    const yearStr = todayStr.slice(0, 4);
+
+    let daily = 0;
+    let monthly = 0;
+    let yearly = 0;
+    let total = 0;
+
+    for (const b of bookings) {
+      const amt = Number(b.amount ?? b.price ?? 0) || 0;
+      const bDate = (b.created_at || b.start_time || '').slice(0, 10);
+      if (bDate === todayStr) daily += amt;
+      if (bDate.startsWith(monthStr)) monthly += amt;
+      if (bDate.startsWith(yearStr)) yearly += amt;
+      total += amt;
+    }
+
+    return {
+      daily_revenue: daily,
+      monthly_revenue: monthly,
+      yearly_revenue: yearly,
+      total_revenue: total,
+    };
+  }, [reportRevenueSummary, bookings]);
+
   if (!isAdmin) {
     return (
       <div className="wrap admin">
@@ -234,38 +372,167 @@ export default function AdminPage() {
     );
   }
 
+  // รายการเมนูทั้งหมดในแถบเมนูด้านข้าง (Sidebar Navigation) พร้อมไอคอนและตัวเลขนับจำนวน
+  const adminNavItems = [
+    { key: 'logs', label: 'ประวัติการใช้งาน', icon: IconHistory, count: allLogs.length },
+    { key: 'allbookings', label: 'การจองทั้งหมด', icon: IconTicket, count: bookings.length },
+    { key: 'users', label: 'จัดการผู้ใช้งาน', icon: IconUsers, count: users.length },
+    { key: 'lockers', label: 'จัดการตู้ล็อกเกอร์', icon: IconLockers, count: lockers.length },
+    { key: 'reports', label: 'รายงานสรุป & รายได้', icon: IconReport, count: null },
+  ];
+
   return (
-    <div className="wrap admin">
-      <header>
-        <div>
-          <p className="eyebrow">Prince of Songkla University · Faculty of Liberal Arts</p>
-          <h1>แผงควบคุมผู้ดูแลระบบ</h1>
-          <p className="subtitle">จัดการผู้ใช้งาน / ตู้ล็อกเกอร์ / ประวัติ / รายงาน</p>
-        </div>
-        <div className="top-links">
-          <span className="admin-who">{currentUser.firstname} {currentUser.lastname} · Admin</span>
-          <button className="btn ghost small" onClick={handleLogout}>ออกจากระบบ</button>
-        </div>
-      </header>
+    <div className={`app-shell ${sidebarOpen ? 'sidebar-open' : 'sidebar-collapsed'}`} id="top">
+      {/* พื้นหลังมืดสำหรับจอมือถือเมื่อเปิดแถบเมนู (Backdrop) */}
+      <div
+        className={`sidebar-backdrop ${sidebarOpen ? 'show' : ''}`}
+        onClick={() => setSidebarOpen(false)}
+      />
 
-      <div className="stats admin">
-        <div className="stat"><div className="num">{dashboard.total_lockers ?? '0'}</div><div className="label">ตู้ทั้งหมด</div></div>
-        <div className="stat ok"><div className="num">{dashboard.available_lockers ?? '0'}</div><div className="label">ว่าง</div></div>
-        <div className="stat danger"><div className="num">{dashboard.in_use_lockers ?? '0'}</div><div className="label">กำลังใช้งาน</div></div>
-        <div className="stat grey"><div className="num">{dashboard.maintenance_lockers ?? '0'}</div><div className="label">ปิดใช้งาน/ซ่อมบำรุง</div></div>
-      </div>
-
-      <div className="tabs">
-        {TABS.map((t) => (
+      {/* ==================================================================
+          1. แถบเมนูด้านข้างซ้ายที่สามารถเปิด-ปิดได้ (Collapsible App Sidebar)
+          ================================================================== */}
+      <aside className={`app-sidebar ${sidebarOpen ? 'open' : ''}`}>
+        {/* โลโก้และชื่อระบบส่วนหัวของแถบเมนู */}
+        <div className="sidebar-brand">
+          <div className="brand-logo">
+            <div className="brand-badge">PSU</div>
+            <div className="brand-text">
+              <span className="brand-title">Smart Locker</span>
+              <span className="brand-sub">Admin Console</span>
+            </div>
+          </div>
+          {/* ปุ่มปิดแถบเมนู (แสดงเฉพาะบนหน้าจอมือถือ) */}
           <button
-            key={t.key}
-            className={`tab-btn ${activeTab === t.key ? 'active' : ''}`}
-            onClick={() => setActiveTab(t.key)}
+            className="sidebar-close-btn"
+            onClick={() => setSidebarOpen(false)}
+            title="ปิดแถบเมนู"
+            aria-label="ปิดแถบเมนู"
           >
-            {t.label}
+            <IconClose />
           </button>
-        ))}
-      </div>
+        </div>
+
+        {/* การ์ดข้อมูลโปรไฟล์ผู้ดูแลระบบที่กำลังเข้าสู่ระบบ */}
+        <div className="sidebar-user-card">
+          <div className="user-avatar">
+            {currentUser?.firstname ? currentUser.firstname.charAt(0).toUpperCase() : 'A'}
+          </div>
+          <div className="user-details">
+            <span className="user-name">
+              {currentUser?.firstname} {currentUser?.lastname}
+            </span>
+            <span className="user-role-badge">Admin System</span>
+          </div>
+        </div>
+
+        {/* รายการเมนูทั้ง 5 ส่วน พร้อมตัวเลข Badge นับจำนวนข้อมูลสด */}
+        <div className="sidebar-menu-section">
+          <div className="sidebar-section-title">เมนูควบคุมระบบ</div>
+          <nav className="sidebar-nav">
+            {adminNavItems.map((item) => {
+              const IconComp = item.icon;
+              const isActive = activeTab === item.key;
+              return (
+                <button
+                  key={item.key}
+                  className={`nav-item ${isActive ? 'active' : ''}`}
+                  onClick={() => {
+                    setActiveTab(item.key);
+                    // บนจอมือถือ (กว้างน้อยกว่า 900px) เมื่อกดเลือกเมนูแล้ว ให้ปิด sidebar อัตโนมัติ
+                    if (typeof window !== 'undefined' && window.innerWidth < 900) {
+                      setSidebarOpen(false);
+                    }
+                  }}
+                >
+                  <span className="nav-icon">
+                    <IconComp />
+                  </span>
+                  <span className="nav-label">{item.label}</span>
+                  {item.count !== null && item.count !== undefined && (
+                    <span className={`nav-badge ${isActive ? '' : 'ok'}`}>
+                      {item.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* ส่วนท้ายของแถบเมนู: ปุ่มกลับหน้าผู้ใช้ และปุ่มออกจากระบบ */}
+        <div className="sidebar-footer">
+          <a href="/" className="sidebar-link-btn" title="กลับไปหน้าแรก">
+            <IconHome width={15} height={15} /> กลับไปหน้าแรก
+          </a>
+          <button
+            className="sidebar-logout-btn"
+            onClick={handleLogout}
+            title="ออกจากระบบ Admin"
+          >
+            <IconLogout /> ออกจากระบบ
+          </button>
+          <div className="sidebar-version">
+            PSU Faculty of Liberal Arts
+          </div>
+        </div>
+      </aside>
+
+      {/* ==================================================================
+          2. ส่วนเนื้อหาหลักด้านขวา (App Main Content Area)
+          ================================================================== */}
+      <div className="app-main">
+        {/* แถบส่วนหัวด้านบน (Topbar) พร้อมปุ่ม Hamburger สลับเปิด-ปิด Sidebar */}
+        <header className="main-topbar">
+          <div className="topbar-left">
+            <button
+              className="sidebar-toggle-btn"
+              onClick={() => setSidebarOpen((prev) => !prev)}
+              title={sidebarOpen ? 'ย่อแถบเมนู' : 'ขยายแถบเมนู'}
+              aria-label="สลับแถบเมนู"
+            >
+              <IconMenu />
+            </button>
+            <div className="topbar-title-group">
+              <span className="topbar-breadcrumb">Admin Console · คณะศิลปศาสตร์ ม.อ.</span>
+              <h1 className="topbar-main-title">
+                {activeTab === 'logs' && 'ประวัติการใช้งานทั้งหมด'}
+                {activeTab === 'allbookings' && 'รายการจองทั้งหมด'}
+                {activeTab === 'users' && 'จัดการผู้ใช้งาน'}
+                {activeTab === 'lockers' && 'จัดการตู้ล็อกเกอร์'}
+                {activeTab === 'reports' && 'รายงานสรุป & รายได้'}
+              </h1>
+            </div>
+          </div>
+          <div className="topbar-right">
+            <span className="updated-badge">{updatedAt}</span>
+            <button className="topbar-refresh-btn" onClick={loadAll} title="รีเฟรชข้อมูลทั้งหมด">
+              <IconRefresh width={14} height={14} /> รีเฟรช
+            </button>
+          </div>
+        </header>
+
+        {/* พื้นที่แสดงผลข้อมูลหลัก (Main Body Container) */}
+        <main className="main-body">
+          {/* สถิติตู้ล็อกเกอร์ภาพรวมในระบบ */}
+          <div className="stats admin">
+            <div className="stat">
+              <div className="num">{dashboard.total_lockers ?? '0'}</div>
+              <div className="label">ตู้ทั้งหมด</div>
+            </div>
+            <div className="stat ok">
+              <div className="num">{dashboard.available_lockers ?? '0'}</div>
+              <div className="label">ตู้ว่าง</div>
+            </div>
+            <div className="stat danger">
+              <div className="num">{dashboard.in_use_lockers ?? '0'}</div>
+              <div className="label">กำลังใช้งาน</div>
+            </div>
+            <div className="stat grey">
+              <div className="num">{dashboard.maintenance_lockers ?? '0'}</div>
+              <div className="label">ปิดใช้งาน/ซ่อมบำรุง</div>
+            </div>
+          </div>
 
       {/* ===== แท็บ: ประวัติการใช้งาน ===== */}
       <div className={`tab-panel ${activeTab === 'logs' ? 'active' : ''}`}>
@@ -425,9 +692,39 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* ===== แท็บ: รายงานสรุป ===== */}
+      {/* ===== 5. แท็บ: รายงานสรุปและรายได้ ===== */}
       <div className={`tab-panel ${activeTab === 'reports' ? 'active' : ''}`}>
-        <div className="section-label"><span>รายงานการใช้งาน</span><div className="rule" /></div>
+        {/* ================================================================
+            สถิติรายได้ทั้งหมดของระบบ: แยกเป็น รายได้รวมทั้งหมด, รายวัน, รายเดือน, รายปี
+            (แสดงเฉพาะในหน้ารายงานสรุปเท่านั้น หน้าอื่นไม่ต้องมี)
+            ================================================================ */}
+        <div className="section-label">
+          <span>สรุปรายได้ทั้งหมดของระบบ</span>
+          <div className="rule" />
+        </div>
+        <div className="revenue-stats">
+          <div className="stat gold">
+            <div className="num">{(revenueSummary.total_revenue || 0).toLocaleString()} ฿</div>
+            <div className="label">รายได้รวมทั้งหมด</div>
+          </div>
+          <div className="stat ok">
+            <div className="num">{(revenueSummary.daily_revenue || 0).toLocaleString()} ฿</div>
+            <div className="label">รายได้วันนี้ (รายวัน)</div>
+          </div>
+          <div className="stat warn">
+            <div className="num">{(revenueSummary.monthly_revenue || 0).toLocaleString()} ฿</div>
+            <div className="label">รายได้เดือนนี้ (รายเดือน)</div>
+          </div>
+          <div className="stat">
+            <div className="num">{(revenueSummary.yearly_revenue || 0).toLocaleString()} ฿</div>
+            <div className="label">รายได้ปีนี้ (รายปี)</div>
+          </div>
+        </div>
+
+        <div className="section-label">
+          <span>รายงานการใช้งานและรายได้ของตู้ล็อกเกอร์</span>
+          <div className="rule" />
+        </div>
         <div className="filter-row">
           <select value={reportPeriod} onChange={(e) => setReportPeriod(e.target.value)}>
             <option value="daily">รายวัน</option>
@@ -440,25 +737,41 @@ export default function AdminPage() {
             <thead>
               <tr>
                 <th>{reportPeriod === 'yearly' ? 'ปี' : reportPeriod === 'monthly' ? 'เดือน' : 'วันที่'}</th>
-                <th>จองตู้</th><th>เปิดตู้</th><th>คืนตู้</th><th>PIN ผิด</th>
-                <th>รวมเหตุการณ์</th><th>อัตราการใช้ตู้</th>
+                <th>จองตู้</th>
+                <th>เปิดตู้</th>
+                <th>คืนตู้</th>
+                <th>PIN ผิด</th>
+                <th>รวมเหตุการณ์</th>
+                <th>อัตราการใช้ตู้</th>
+                <th>รายได้รวม (บาท)</th>
               </tr>
             </thead>
             <tbody>
               {reportsError ? (
-                <tr><td colSpan={7} className="empty">เชื่อมต่อ API ไม่ได้</td></tr>
+                <tr>
+                  <td colSpan={8} className="empty">เชื่อมต่อ API ไม่ได้</td>
+                </tr>
               ) : reports.length === 0 ? (
-                <tr><td colSpan={7} className="empty">ยังไม่มีข้อมูล</td></tr>
+                <tr>
+                  <td colSpan={8} className="empty">ยังไม่มีข้อมูล</td>
+                </tr>
               ) : (
                 reports.map((r, i) => (
                   <tr key={i}>
-                    <td data-label={reportPeriod === 'yearly' ? 'ปี' : reportPeriod === 'monthly' ? 'เดือน' : 'วันที่'}>{r.period_label}</td>
+                    <td data-label={reportPeriod === 'yearly' ? 'ปี' : reportPeriod === 'monthly' ? 'เดือน' : 'วันที่'}>
+                      {r.period_label}
+                    </td>
                     <td data-label="จองตู้">{r.bookings}</td>
                     <td data-label="เปิดตู้">{r.opens}</td>
                     <td data-label="คืนตู้">{r.closes}</td>
                     <td data-label="PIN ผิด">{r.wrong_pins}</td>
                     <td data-label="รวมเหตุการณ์"><b>{r.total_events}</b></td>
                     <td data-label="อัตราการใช้ตู้">{r.utilization_rate}%</td>
+                    <td data-label="รายได้รวม (บาท)">
+                      <b className="revenue-amount">
+                        {(Number(r.total_revenue) || 0).toLocaleString()} ฿
+                      </b>
+                    </td>
                   </tr>
                 ))
               )}
@@ -467,15 +780,30 @@ export default function AdminPage() {
         </div>
       </div>
 
-      <footer style={{ marginTop: 24 }}>
-        <button className="btn" onClick={loadAll}>รีเฟรชตอนนี้</button>
-        <span className="updated">{updatedAt}</span>
-      </footer>
+          <footer style={{ marginTop: 28, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button className="topbar-refresh-btn" onClick={loadAll} title="รีเฟรชข้อมูลตอนนี้">
+              <IconRefresh width={14} height={14} /> รีเฟรชตอนนี้
+            </button>
+            <span className="updated-badge">{updatedAt}</span>
+          </footer>
+        </main>
+      </div>
 
-      {/* Bottom app nav — mobile only */}
+      {/* แถบนำทางด้านล่างสำหรับหน้าจอมือถือ (Bottom App Navigation) */}
       <nav className="bottom-nav">
-        <a href="/"><IconHome /> หน้าหลัก</a>
-        <button className="active" onClick={loadAll}><IconRefresh /> รีเฟรช</button>
+        <button
+          className={sidebarOpen ? 'active' : ''}
+          onClick={() => setSidebarOpen((v) => !v)}
+          title="เปิด/ปิดแถบเมนู"
+        >
+          <IconMenu /> เมนู
+        </button>
+        <a href="/" title="กลับไปหน้าแรก">
+          <IconHome /> หน้าแรก
+        </a>
+        <button onClick={loadAll} title="รีเฟรชข้อมูล">
+          <IconRefresh /> รีเฟรช
+        </button>
       </nav>
     </div>
   );

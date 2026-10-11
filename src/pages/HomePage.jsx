@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { getJSON, postJSON, request } from '../api';
-import { formatMinutes, formatClock, formatDateTime, formatElapsed } from '../utils/format';
+import { formatMinutes, formatClock, formatDateTime, formatFullDateTime, formatElapsed } from '../utils/format';
 import {
   bangkokParts,
   bangkokDateStr,
@@ -13,7 +13,10 @@ import {
 } from '../utils/time';
 import RelocationModal from '../components/RelocationModal';
 
+// ป้ายกำกับขนาดตู้ภาษาไทย
 const SIZE_LABEL = { small: 'เล็ก', medium: 'กลาง', large: 'ใหญ่' };
+
+// ป้ายกำกับสถานะตู้ล็อกเกอร์ภาษาไทย
 const STATUS_LABEL = {
   available: 'ว่าง',
   busy: 'ไม่ว่าง', // มีคนอื่นใช้อยู่ ณ ตอนนี้
@@ -21,6 +24,18 @@ const STATUS_LABEL = {
   unavailable: 'ปิดใช้งาน',
   maintenance: 'ซ่อมบำรุง',
 };
+
+// ป้ายกำกับประเภทเหตุการณ์ในประวัติการใช้งาน
+const ACTION_LABEL = {
+  book: 'จองตู้',
+  open: 'ปลดล็อกตู้',
+  close: 'คืนตู้',
+  wrong_pin: 'กรอก PIN ผิด',
+  admin_release: 'Admin ปล่อยตู้',
+  relocate: 'ย้ายตู้',
+  decline_relocate: 'ปฏิเสธย้ายตู้ (ยกเลิกจอง)',
+};
+
 const MIN_MINUTES = 15;
 const MAX_MINUTES = 24 * 60;
 const MINUTES_STEP = 15;
@@ -40,7 +55,11 @@ function loadStoredUser() {
   }
 }
 
-// ---------------- icons (inline, no external deps) ----------------
+// ==================================================================
+// ไอคอน SVG แบบ Inline (ไม่พึ่งพาแพ็กเกจภายนอก)
+// ==================================================================
+
+// ไอคอนตู้ล็อกเกอร์ทั้งหมด (ตาราง 4 ช่อง)
 function IconLockers(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -51,11 +70,78 @@ function IconLockers(props) {
     </svg>
   );
 }
+
+// ไอคอนตั๋ว / ตู้ของฉัน
 function IconTicket(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
       <path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1a2 2 0 0 0 0 4v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1a2 2 0 0 0 0-4Z" />
       <path d="M13 5v2M13 17v2M13 10.5v3" />
+    </svg>
+  );
+}
+
+// ไอคอนเปิด-ปิดเมนูด้านซ้าย (Hamburger Menu 3 ขีด)
+function IconMenu(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <line x1="3" y1="12" x2="21" y2="12" />
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <line x1="3" y1="18" x2="21" y2="18" />
+    </svg>
+  );
+}
+
+// ไอคอนปิด / กากบาท
+function IconClose(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
+// ไอคอนประวัติการใช้งาน (นาฬิกาย้อนหลัง / History)
+function IconHistory(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <polyline points="12 7 12 12 15 15" />
+      <path d="M3.05 11a9 9 0 0 1 .5-2" />
+    </svg>
+  );
+}
+
+// ไอคอนออกจากระบบ (Logout)
+function IconLogout(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <polyline points="16 17 21 12 16 7" />
+      <line x1="21" y1="12" x2="9" y2="12" />
+    </svg>
+  );
+}
+
+// ไอคอนรีเฟรชข้อมูล (Refresh)
+function IconRefresh(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M3 12a9 9 0 0 1 15.4-6.4L21 8" />
+      <path d="M21 3v5h-5" />
+      <path d="M21 12a9 9 0 0 1-15.4 6.4L3 16" />
+      <path d="M3 21v-5h5" />
+    </svg>
+  );
+}
+
+// ไอคอนผู้ใช้งาน / บุคคล (User)
+function IconUser(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
     </svg>
   );
 }
@@ -90,16 +176,27 @@ export default function HomePage() {
   const [lastname, setLastname] = useState('');
   const [authMsg, setAuthMsg] = useState(null); // { type, text }
 
-  // ---------------- lockers / bookings ----------------
+  // ---------------- lockers / bookings / logs ----------------
   const [lockers, setLockers] = useState([]);
   const [lockersLoaded, setLockersLoaded] = useState(false);
   const [lockersError, setLockersError] = useState(false);
   const [myBookings, setMyBookings] = useState([]);
   const [updatedAt, setUpdatedAt] = useState('–');
-  const [page, setPage] = useState('all'); // 'all' = ตู้ทั้งหมด, 'mine' = ตู้ของฉัน
+  const [page, setPage] = useState('all'); // 'all' = ตู้ทั้งหมด, 'mine' = ตู้ของฉัน, 'history' = ประวัติการใช้งาน
   const [bookingFilter, setBookingFilter] = useState('all'); // all | using | booked
   const [relocation, setRelocation] = useState(null);
   const snoozedRef = useRef(new Set()); // booking ที่ผู้ใช้กด "รอก่อน" ในรอบนี้
+
+  // ---------------- แถบเมนูด้านซ้าย (Sidebar State) ----------------
+  // สถานะเปิด-ปิดแถบเมนูด้านซ้าย (ค่าเริ่มต้น: เปิดไว้)
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // ---------------- ประวัติการใช้งานของผู้ใช้งาน (User Logs State) ----------------
+  const [myLogs, setMyLogs] = useState([]); // รายการประวัติการใช้งาน
+  const [myLogsLoading, setMyLogsLoading] = useState(false); // สถานะกำลังโหลดประวัติ
+  const [myLogsError, setMyLogsError] = useState(false); // สถานะโหลดประวัติไม่สำเร็จ
+  const [historyFilterAction, setHistoryFilterAction] = useState(''); // กรองตามประเภทเหตุการณ์ เช่น book, open, close
+  const [historySearch, setHistorySearch] = useState(''); // ค้นหาหมายเลขตู้ในประวัติ
 
   // ---------------- booking (จองตรง) ----------------
   const [selectedMinutes, setSelectedMinutes] = useState({}); // { [locker_id]: minutes }
@@ -148,6 +245,7 @@ export default function HomePage() {
   }, [currentUser, navigate]);
 
   // ---------------- data loading ----------------
+  // ดึงข้อมูลตู้ล็อกเกอร์ทั้งหมด
   const loadLockers = useCallback(async () => {
     try {
       const uid = userRef.current?.user_id;
@@ -164,6 +262,7 @@ export default function HomePage() {
     }
   }, []);
 
+  // ดึงข้อมูลการจองปัจจุบันของผู้ใช้
   const loadMyBookings = useCallback(async () => {
     const user = userRef.current;
     if (!user) return;
@@ -172,25 +271,54 @@ export default function HomePage() {
     setMyBookings(bookings);
   }, []);
 
+  // ดึงข้อมูลประวัติการใช้งานเฉพาะของผู้ใช้งานปัจจุบัน
+  const loadMyLogs = useCallback(async () => {
+    const user = userRef.current;
+    if (!user) return;
+    setMyLogsLoading(true);
+    try {
+      const json = await getJSON('/logs?user_id=' + user.user_id);
+      if (json?.success && Array.isArray(json?.data)) {
+        // กรองเฉพาะประวัติที่เป็นของ user_id ตัวเองเพื่อความปลอดภัย
+        const userOnly = json.data.filter((r) => Number(r.user_id) === Number(user.user_id));
+        setMyLogs(userOnly);
+        setMyLogsError(false);
+      } else {
+        setMyLogsError(true);
+      }
+    } catch (err) {
+      console.error('Error loading my logs:', err);
+      setMyLogsError(true);
+    } finally {
+      setMyLogsLoading(false);
+    }
+  }, []);
+
+  // รอบโหลดข้อมูลอัตโนมัติ (Polling) ทุกๆ 5 วินาที
   useEffect(() => {
     loadLockers();
     loadMyBookings();
+    loadMyLogs();
     const id = setInterval(() => {
       loadLockers();
       loadMyBookings();
+      loadMyLogs();
     }, 5000);
     return () => clearInterval(id);
-  }, [loadLockers, loadMyBookings]);
+  }, [loadLockers, loadMyBookings, loadMyLogs]);
 
+  // เมื่อผู้ใช้เข้าสู่ระบบหรือออกจากระบบ ให้รีเฟรชข้อมูลให้ตรงกับสิทธิ์
   useEffect(() => {
     loadLockers();
     loadMyBookings();
+    loadMyLogs();
     if (!currentUser) {
       setMyBookings([]);
+      setMyLogs([]);
       setPage('all');
       setRelocation(null);
     }
-  }, [currentUser, loadLockers, loadMyBookings]);
+  }, [currentUser, loadLockers, loadMyBookings, loadMyLogs]);
 
   // ---------------- แจ้งผู้ใช้คนถัดไป: ถึงเวลาจองแล้วแต่คนก่อนยังไม่เอาของออก ----------------
   useEffect(() => {
@@ -327,9 +455,13 @@ export default function HomePage() {
     setAuthMsg(null);
   }
 
+  // ฟังก์ชันออกจากระบบ: เคลียร์ข้อมูลผู้ใช้ รายการตู้ที่จองไว้ ประวัติการใช้งาน และกลับหน้าแรก
   function handleLogout() {
     setCurrentUser(null);
     localStorage.removeItem('locker_user');
+    setMyBookings([]);
+    setMyLogs([]);
+    setPage('all');
   }
 
   // ---------------- booking + คิดเงินตามขนาดตู้ ----------------
@@ -557,17 +689,36 @@ export default function HomePage() {
 
     setBatchBusy(true);
     try {
+      let results = [];
+      // 1. เรียกใช้งาน endpoint /bookings/batch-action
       const res = await postJSON('/bookings/batch-action', {
         user_id: currentUser.user_id,
         items: ids.map((booking_id) => ({ booking_id, action })),
-      });
-      const json = await res.json().catch(() => null);
-      if (!json) {
-        alert(`เซิร์ฟเวอร์ตอบกลับผิดพลาด (HTTP ${res.status})`);
-        return;
+      }).catch(() => null);
+
+      if (res && res.ok) {
+        const json = await res.json().catch(() => null);
+        if (json?.results) results = json.results;
       }
 
-      const results = json.results || [];
+      // 2. Fallback: หาก endpoint batch-action ตอบ 404 หรือยังไม่พร้อม ให้ใช้ /verify-pin ตาม PIN ของตู้
+      if (results.length === 0) {
+        for (const booking_id of ids) {
+          const booking = myBookings.find((b) => b.booking_id === booking_id);
+          if (!booking) {
+            results.push({ booking_id, success: false, message: 'ไม่พบรายการจองนี้' });
+            continue;
+          }
+          const pinRes = await postJSON('/verify-pin', {
+            booking_id,
+            pin_code: booking.pin_code,
+            action,
+          });
+          const pinJson = await pinRes.json().catch(() => ({ success: false, message: 'การเชื่อมต่อผิดพลาด' }));
+          results.push({ booking_id, success: pinJson.success, message: pinJson.message });
+        }
+      }
+
       const failed = results.filter((r) => !r.success);
       if (failed.length > 0) {
         alert(
@@ -584,6 +735,8 @@ export default function HomePage() {
       if (action === 'close' && succeeded > 0) {
         setReturnResult({ title: 'คืนตู้สำเร็จ', desc: `คืนตู้แล้ว ${succeeded} ใบ` });
         setReturnResultOverlay(true);
+      } else if (action === 'open' && succeeded > 0) {
+        alert('ปลดล็อกตู้สำเร็จ! ตู้เปิดพร้อมใช้งานแล้ว');
       }
     } catch (err) {
       alert('เกิดข้อผิดพลาด: ' + err.message);
@@ -609,85 +762,243 @@ export default function HomePage() {
     (b) => bookingFilter === 'all' || phaseGroup(b.phase) === bookingFilter
   );
 
+  // ---------------- ประวัติการใช้งานที่ผ่านการกรอง (Filtered Logs) ----------------
+  // กรองรายการประวัติการใช้งานตามประเภทเหตุการณ์ที่เลือก และคำค้นหาหมายเลขตู้
+  const filteredUserLogs = useMemo(() => {
+    let list = myLogs;
+    if (historyFilterAction) {
+      list = list.filter((r) => r.action === historyFilterAction);
+    }
+    if (historySearch.trim()) {
+      const q = historySearch.trim().toLowerCase();
+      list = list.filter((r) => (r.locker_number || '').toLowerCase().includes(q));
+    }
+    return list;
+  }, [myLogs, historyFilterAction, historySearch]);
+
   if (currentUser?.role === 'admin') {
     return null; // กำลัง redirect ไป /admin ผ่าน useEffect ด้านบน ไม่ต้องโชว์หน้านี้แม้แต่แวบเดียว
   }
 
   return (
-    <div className="wrap" id="top">
-      <header>
-        <div>
-          <p className="eyebrow">Prince of Songkla University · Faculty of Liberal Arts</p>
-          <h1>ระบบตู้รับฝากของอัจฉริยะ</h1>
-          <p className="subtitle">จุดบริการตู้ล็อกเกอร์ ตึกคณะศิลปศาสตร์</p>
-        </div>
-      </header>
+    <div className={`app-shell ${sidebarOpen ? 'sidebar-open' : 'sidebar-collapsed'}`} id="top">
+      {/* พื้นหลังมืดสำหรับจอมือถือเมื่อเปิดแถบเมนู (แตะเพื่อปิดแถบเมนูได้) */}
+      <div
+        className={`sidebar-backdrop ${sidebarOpen ? 'show' : ''}`}
+        onClick={() => setSidebarOpen(false)}
+        aria-hidden="true"
+      />
 
-      <div className="panel">
-        {!currentUser ? (
-          <div>
-            <h2>{isRegisterMode ? 'สมัครสมาชิกใหม่' : 'เข้าสู่ระบบเพื่อจองตู้'}</h2>
-            <div className="form-row">
-              <input
-                type="text"
-                placeholder="ชื่อผู้ใช้ (username)"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-              />
-              <input
-                type="password"
-                placeholder="รหัสผ่าน"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+      {/* ==================================================================
+          แถบเมนูด้านซ้ายที่สามารถเปิด-ปิดได้ (Collapsible Sidebar)
+          ================================================================== */}
+      <aside className={`app-sidebar ${sidebarOpen ? 'open' : 'collapsed'}`}>
+        {/* ส่วนหัวของแถบเมนู: โลโก้ และปุ่มปิดบนจอมือถือ */}
+        <div className="sidebar-brand">
+          <div className="brand-logo">
+            <span className="brand-badge">PSU</span>
+            <div className="brand-text">
+              <div className="brand-title">ระบบตู้ล็อกเกอร์</div>
+              <div className="brand-sub">FACULTY OF LIBERAL ARTS</div>
             </div>
-            {isRegisterMode && (
-              <div className="form-row" style={{ marginTop: 10 }}>
-                <input
-                  type="text"
-                  placeholder="ชื่อจริง"
-                  value={firstname}
-                  onChange={(e) => setFirstname(e.target.value)}
-                />
-                <input
-                  type="text"
-                  placeholder="นามสกุล"
-                  value={lastname}
-                  onChange={(e) => setLastname(e.target.value)}
-                />
+          </div>
+          <button
+            type="button"
+            className="sidebar-close-btn"
+            onClick={() => setSidebarOpen(false)}
+            title="ปิดเมนู"
+            aria-label="ปิดเมนู"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* ข้อมูลโปรไฟล์ผู้ใช้งานในแถบเมนู */}
+        {currentUser ? (
+          <div className="sidebar-user-card">
+            <div className="user-avatar">
+              {currentUser.firstname ? currentUser.firstname.charAt(0).toUpperCase() : 'U'}
+            </div>
+            <div className="user-details">
+              <div className="user-name">
+                {currentUser.firstname} {currentUser.lastname}
               </div>
-            )}
-            <div className="form-row" style={{ marginTop: 14, display: 'block' }}>
-              <button className="btn primary" style={{ width: '100%' }} onClick={handleSubmit}>
-                {isRegisterMode ? 'สมัครสมาชิก' : 'เข้าสู่ระบบ'}
-              </button>
+              <span className="user-role-badge">
+                {currentUser.role === 'admin' ? 'ผู้ดูแลระบบ · Admin' : 'ผู้ใช้งานทั่วไป · User'}
+              </span>
             </div>
-            <button className="toggle-link" onClick={handleToggleMode}>
-              {isRegisterMode ? 'มีบัญชีอยู่แล้ว? เข้าสู่ระบบ' : 'ยังไม่มีบัญชี? สมัครสมาชิก'}
-            </button>
-            {authMsg && <div className={`msg ${authMsg.type}`}>{authMsg.text}</div>}
           </div>
         ) : (
-          <div className="account-row">
-            <div className="account-info">
-              เข้าสู่ระบบเป็น <b>{currentUser.firstname} {currentUser.lastname}</b>
-              <span className="role">{currentUser.role}</span>
+          <div className="sidebar-guest-card">
+            <div className="guest-icon"><IconUser /></div>
+            <div>
+              <div className="guest-title">ยังไม่ได้เข้าสู่ระบบ</div>
+              <div className="guest-desc">กรุณาเข้าสู่ระบบเพื่อใช้งานตู้</div>
             </div>
-            <button className="btn ghost" onClick={handleLogout}>ออกจากระบบ</button>
           </div>
         )}
-      </div>
 
-      {currentUser && (
-        <div className="tabs page-tabs" role="tablist">
-          <button role="tab" aria-selected={page === 'all'} className={`tab-btn ${page === 'all' ? 'active' : ''}`} onClick={() => setPage('all')}>
-            ตู้ทั้งหมด
-          </button>
-          <button role="tab" aria-selected={page === 'mine'} className={`tab-btn ${page === 'mine' ? 'active' : ''}`} onClick={() => setPage('mine')}>
-            ตู้ของฉัน{myBookings.length > 0 && <span className="tab-count">{myBookings.length}</span>}
-          </button>
+        {/* เมนูนำทางหลัก (Navigation Items) */}
+        <div className="sidebar-menu-section">
+          <div className="sidebar-section-title">เมนูบริการ</div>
+          <nav className="sidebar-nav">
+            {/* เมนูที่ 1: ตู้ทั้งหมด */}
+            <button
+              type="button"
+              className={`nav-item ${page === 'all' ? 'active' : ''}`}
+              onClick={() => {
+                setPage('all');
+                if (window.innerWidth < 900) setSidebarOpen(false);
+              }}
+            >
+              <span className="nav-icon"><IconLockers /></span>
+              <span className="nav-label">ตู้ทั้งหมด</span>
+              <span className="nav-badge ok">ว่าง {statAvailable}</span>
+            </button>
+
+            {/* เมนูที่ 2: ตู้ของฉัน (เข้าถึงได้เฉพาะเมื่อเข้าสู่ระบบแล้ว) */}
+            <button
+              type="button"
+              className={`nav-item ${page === 'mine' ? 'active' : ''}`}
+              disabled={!currentUser}
+              onClick={() => {
+                if (!currentUser) return;
+                setPage('mine');
+                if (window.innerWidth < 900) setSidebarOpen(false);
+              }}
+            >
+              <span className="nav-icon"><IconTicket /></span>
+              <span className="nav-label">ตู้ของฉัน</span>
+              {myBookings.length > 0 && (
+                <span className="nav-badge gold">{myBookings.length}</span>
+              )}
+            </button>
+
+            {/* เมนูที่ 3: ประวัติการใช้งาน (เข้าถึงได้เฉพาะเมื่อเข้าสู่ระบบแล้ว) */}
+            <button
+              type="button"
+              className={`nav-item ${page === 'history' ? 'active' : ''}`}
+              disabled={!currentUser}
+              onClick={() => {
+                if (!currentUser) return;
+                setPage('history');
+                loadMyLogs();
+                if (window.innerWidth < 900) setSidebarOpen(false);
+              }}
+            >
+              <span className="nav-icon"><IconHistory /></span>
+              <span className="nav-label">ประวัติการใช้งาน</span>
+              {myLogs.length > 0 && (
+                <span className="nav-badge grey">{myLogs.length}</span>
+              )}
+            </button>
+          </nav>
         </div>
-      )}
+
+        {/* ส่วนท้ายของ Sidebar: ปุ่มออกจากระบบ */}
+        <div className="sidebar-footer">
+          {currentUser && (
+            <button
+              type="button"
+              className="sidebar-logout-btn"
+              onClick={handleLogout}
+            >
+              <IconLogout />
+              <span>ออกจากระบบ</span>
+            </button>
+          )}
+          <div className="sidebar-version">Smart Storage Locker v2.0</div>
+        </div>
+      </aside>
+
+      {/* ==================================================================
+          ส่วนแสดงผลเนื้อหาหลัก (App Main)
+          ================================================================== */}
+      <div className="app-main">
+        {/* แถบด้านบนของหน้าเว็บ (Topbar) */}
+        <header className="main-topbar">
+          <div className="topbar-left">
+            <button
+              type="button"
+              className="sidebar-toggle-btn"
+              onClick={() => setSidebarOpen((prev) => !prev)}
+              title={sidebarOpen ? 'ย่อแถบเมนู' : 'เปิดแถบเมนู'}
+              aria-label="สลับแถบเมนู"
+            >
+              <IconMenu />
+            </button>
+            <div className="topbar-title-group">
+              <span className="topbar-breadcrumb">
+                {page === 'all' ? 'ตู้ล็อกเกอร์ทั้งหมด' : page === 'mine' ? 'ตู้ของฉัน' : 'ประวัติการใช้งาน'}
+              </span>
+              <h1 className="topbar-main-title">ระบบตู้รับฝากของอัจฉริยะ</h1>
+            </div>
+          </div>
+          <div className="topbar-right">
+            <span className="updated-badge">{updatedAt}</span>
+            <button
+              type="button"
+              className="btn ghost small"
+              onClick={() => {
+                loadLockers();
+                loadMyBookings();
+                if (page === 'history') loadMyLogs();
+              }}
+              title="รีเฟรชข้อมูล"
+            >
+              <IconRefresh style={{ width: 14, height: 14, verticalAlign: 'middle', marginRight: 4 }} />
+              รีเฟรช
+            </button>
+          </div>
+        </header>
+
+        {/* เนื้อหาภายในหน้าเว็บ (Main Body) */}
+        <main className="main-body">
+          {/* กรณีที่ยังไม่ได้เข้าสู่ระบบ ให้แสดงกล่องเข้าสู่ระบบ / สมัครสมาชิก */}
+          {!currentUser && (
+            <div className="panel">
+              <h2>{isRegisterMode ? 'สมัครสมาชิกใหม่' : 'เข้าสู่ระบบเพื่อจองตู้'}</h2>
+              <div className="form-row">
+                <input
+                  type="text"
+                  placeholder="ชื่อผู้ใช้ (username)"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+                <input
+                  type="password"
+                  placeholder="รหัสผ่าน"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+              {isRegisterMode && (
+                <div className="form-row" style={{ marginTop: 10 }}>
+                  <input
+                    type="text"
+                    placeholder="ชื่อจริง"
+                    value={firstname}
+                    onChange={(e) => setFirstname(e.target.value)}
+                  />
+                  <input
+                    type="text"
+                    placeholder="นามสกุล"
+                    value={lastname}
+                    onChange={(e) => setLastname(e.target.value)}
+                  />
+                </div>
+              )}
+              <div className="form-row" style={{ marginTop: 14, display: 'block' }}>
+                <button className="btn primary" style={{ width: '100%' }} onClick={handleSubmit}>
+                  {isRegisterMode ? 'สมัครสมาชิก' : 'เข้าสู่ระบบ'}
+                </button>
+              </div>
+              <button className="toggle-link" onClick={handleToggleMode}>
+                {isRegisterMode ? 'มีบัญชีอยู่แล้ว? เข้าสู่ระบบ' : 'ยังไม่มีบัญชี? สมัครสมาชิก'}
+              </button>
+              {authMsg && <div className={`msg ${authMsg.type}`}>{authMsg.text}</div>}
+            </div>
+          )}
 
       {page === 'all' && (<>
       <div className="stats">
@@ -956,24 +1267,123 @@ export default function HomePage() {
 
       </>)}
 
-      <footer>
-        <button className="btn ghost" onClick={() => { loadLockers(); loadMyBookings(); }}>รีเฟรชตอนนี้</button>
-        <span className="updated">{updatedAt}</span>
-      </footer>
+      {/* ==================================================================
+          ส่วนแสดงผล: ประวัติการใช้งาน (Usage History View)
+          ================================================================== */}
+      {page === 'history' && (
+        <div className="history-section">
+          <div className="section-label">
+            <span>ประวัติการใช้งานตู้ล็อกเกอร์ของคุณ</span>
+            <div className="rule" />
+          </div>
 
-      {/* Bottom app nav — mobile only */}
+          {/* แถบตัวกรองประวัติการใช้งาน: กรองตามประเภทเหตุการณ์, ค้นหาตู้, และปุ่มรีเฟรช */}
+          <div className="history-filter-row">
+            <select
+              value={historyFilterAction}
+              onChange={(e) => setHistoryFilterAction(e.target.value)}
+              aria-label="กรองประเภทเหตุการณ์"
+            >
+              <option value="">ทุกเหตุการณ์ ({myLogs.length})</option>
+              <option value="book">จองตู้</option>
+              <option value="open">ปลดล็อกตู้</option>
+              <option value="close">คืนตู้</option>
+              <option value="wrong_pin">กรอก PIN ผิด</option>
+              <option value="admin_release">Admin ปล่อยตู้</option>
+              <option value="relocate">ย้ายตู้</option>
+            </select>
+
+            <input
+              type="text"
+              placeholder="ค้นหาตามหมายเลขตู้ เช่น A1..."
+              value={historySearch}
+              onChange={(e) => setHistorySearch(e.target.value)}
+              style={{ maxWidth: 220 }}
+            />
+
+            <button
+              type="button"
+              className="btn ghost small"
+              disabled={myLogsLoading}
+              onClick={loadMyLogs}
+              title="รีเฟรชประวัติการใช้งาน"
+            >
+              <IconRefresh style={{ width: 13, height: 13, verticalAlign: 'middle', marginRight: 4 }} />
+              {myLogsLoading ? 'กำลังโหลด...' : 'รีเฟรช'}
+            </button>
+          </div>
+
+          {/* ตารางแสดงรายการประวัติการใช้งาน */}
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>วันที่และเวลา</th>
+                  <th>ตู้ล็อกเกอร์</th>
+                  <th>เหตุการณ์</th>
+                </tr>
+              </thead>
+              <tbody>
+                {!currentUser ? (
+                  <tr><td colSpan={3} className="empty">กรุณาเข้าสู่ระบบก่อนเพื่อดูประวัติการใช้งาน</td></tr>
+                ) : myLogsError ? (
+                  <tr><td colSpan={3} className="empty">เชื่อมต่อ API ไม่ได้ หรือเกิดข้อผิดพลาดในการโหลด</td></tr>
+                ) : myLogsLoading && myLogs.length === 0 ? (
+                  <tr><td colSpan={3} className="empty">กำลังโหลดประวัติการใช้งาน...</td></tr>
+                ) : filteredUserLogs.length === 0 ? (
+                  <tr><td colSpan={3} className="empty">ไม่มีประวัติการใช้งาน{historyFilterAction || historySearch ? ' ที่ตรงกับเงื่อนไขการค้นหา' : ''}</td></tr>
+                ) : (
+                  filteredUserLogs.map((log, idx) => (
+                    <tr key={log.log_id || idx}>
+                      <td data-label="วันที่และเวลา">
+                        <span className="log-time">{formatFullDateTime(log.timestamp)}</span>
+                      </td>
+                      <td data-label="ตู้ล็อกเกอร์">
+                        <b className="log-locker-badge">{log.locker_number || '–'}</b>
+                      </td>
+                      <td data-label="เหตุการณ์">
+                        <span className={`badge ${log.action}`}>
+                          {ACTION_LABEL[log.action] || log.action}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      </main>
+
+      {/* แถบเมนูด้านล่างสำหรับจอมือถือ (Bottom App Nav — แสดง 3 เมนูหลัก) */}
       <nav className="bottom-nav">
-        <button className={page === 'all' ? 'active' : ''} onClick={() => { setPage('all'); window.scrollTo({ top: 0 }); }}>
+        <button
+          type="button"
+          className={page === 'all' ? 'active' : ''}
+          onClick={() => { setPage('all'); window.scrollTo({ top: 0 }); }}
+        >
           <IconLockers /> ตู้ทั้งหมด
         </button>
         <button
+          type="button"
           className={page === 'mine' ? 'active' : ''}
           disabled={!currentUser}
           onClick={() => { setPage('mine'); window.scrollTo({ top: 0 }); }}
         >
           <IconTicket /> ตู้ของฉัน
         </button>
+        <button
+          type="button"
+          className={page === 'history' ? 'active' : ''}
+          disabled={!currentUser}
+          onClick={() => { setPage('history'); loadMyLogs(); window.scrollTo({ top: 0 }); }}
+        >
+          <IconHistory /> ประวัติ
+        </button>
       </nav>
+    </div>
 
       {/* Modal: สแกน QR เพื่อชำระเงิน (จำลอง) */}
       <div className={`overlay ${paymentOverlay ? 'show' : ''}`}>
