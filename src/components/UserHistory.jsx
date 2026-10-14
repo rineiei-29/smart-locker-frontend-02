@@ -32,12 +32,7 @@ const SIZE_LABEL = { small: 'เล็ก', medium: 'กลาง', large: 'ใ�
 // ป้ายกำกับสถานะการจองในอดีต
 const STATUS_LABEL = { completed: 'คืนตู้แล้ว', cancelled: 'ยกเลิก' };
 
-// ตัวเลือกตัวกรองสถานะ
-const FILTERS = [
-  { key: 'all', label: 'ทั้งหมด' },
-  { key: 'completed', label: 'คืนตู้แล้ว' },
-  { key: 'cancelled', label: 'ยกเลิก' },
-];
+
 
 /**
  * คอมโพเนนต์แสดงประวัติการใช้งานของผู้ใช้
@@ -48,7 +43,6 @@ export default function UserHistory({ user, active }) {
   const [rows, setRows] = useState([]);
   const [summary, setSummary] = useState(null);
   const [state, setState] = useState('loading'); // 'loading' | 'ok' | 'error'
-  const [filter, setFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
 
@@ -73,77 +67,23 @@ export default function UserHistory({ user, active }) {
     if (active) load();
   }, [active, load]);
 
-  // กรองข้อมูลตามสถานะที่เลือก (ทั้งหมด, คืนตู้แล้ว, ยกเลิก)
-  const visible = rows.filter((r) => filter === 'all' || r.status === filter);
-  const totalPages = Math.max(1, Math.ceil(visible.length / pageSize));
+  // แสดงข้อมูลประวัติการจองทั้งหมด
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
   const activePage = Math.min(Math.max(1, page), totalPages);
 
   // ตัดแบ่งข้อมูลตามหน้า (Pagination Slice)
   const paginatedRows = useMemo(() => {
-    return visible.slice((activePage - 1) * pageSize, activePage * pageSize);
-  }, [visible, activePage, pageSize]);
+    return rows.slice((activePage - 1) * pageSize, activePage * pageSize);
+  }, [rows, activePage, pageSize]);
 
   return (
     <div>
-      <div className="section-label">
-        <span>
-          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1a2 2 0 0 0 0 4v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1a2 2 0 0 0 0-4Z" />
-            <path d="M13 5v2M13 17v2M13 10.5v3" />
-          </svg>
-          ประวัติการใช้งานของฉัน — รายการที่เคยจอง
-        </span>
-        <div className="rule" />
-      </div>
-
-      {/* กล่องการ์ดสรุปยอดการใช้งาน (Summary Cards) */}
-      {summary && (
-        <div className="stats-grid" style={{ marginBottom: 16 }}>
-          <div className="stat-card">
-            <div className="stat-label">จำนวนครั้งที่เคยใช้</div>
-            <div className="stat-val">{summary.total_bookings} <span style={{ fontSize: 13, fontWeight: 400 }}>ครั้ง</span></div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">คืนตู้สำเร็จ</div>
-            <div className="stat-val" style={{ color: 'var(--ok)' }}>{summary.completed_bookings} <span style={{ fontSize: 13, fontWeight: 400 }}>ครั้ง</span></div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">ยกเลิก</div>
-            <div className="stat-val" style={{ color: summary.cancelled_bookings > 0 ? 'var(--danger)' : 'var(--muted)' }}>
-              {summary.cancelled_bookings} <span style={{ fontSize: 13, fontWeight: 400 }}>ครั้ง</span>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">เวลารวมที่ฝาก</div>
-            <div className="stat-val" style={{ fontSize: 20 }}>{formatMinutes(summary.total_minutes_used)}</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">ยอดชำระสะสม</div>
-            <div className="stat-val" style={{ fontSize: 20, color: 'var(--gold)' }}>{formatBaht(summary.total_spent)}</div>
-          </div>
-        </div>
-      )}
-
-      {/* แถบตัวกรองสถานะ */}
-      <div className="filter-chips" style={{ marginBottom: 12 }}>
-        {FILTERS.map((f) => (
-          <button
-            key={f.key}
-            type="button"
-            className={`filter-chip ${filter === f.key ? 'active' : ''}`}
-            onClick={() => { setFilter(f.key); setPage(1); }}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-
-      {/* ตารางแสดงข้อมูลรายการจอง */}
+      {/* ตารางแสดงข้อมูลรายการจองทั้งหมด */}
       {state === 'loading' && <p className="hint">กำลังโหลดประวัติการใช้งาน...</p>}
       {state === 'error' && <p className="hint" style={{ color: 'var(--danger)' }}>โหลดประวัติไม่สำเร็จ</p>}
-      {state === 'ok' && visible.length === 0 && <p className="hint">ไม่มีประวัติการใช้งานในหมวดนี้</p>}
+      {state === 'ok' && rows.length === 0 && <p className="hint">ไม่มีประวัติการใช้งาน</p>}
 
-      {state === 'ok' && visible.length > 0 && (
+      {state === 'ok' && rows.length > 0 && (
         <>
           <div className="table-wrap">
             <table className="data-table">
@@ -168,7 +108,7 @@ export default function UserHistory({ user, active }) {
                     <td>{formatDateTimeFull(r.start_time)}</td>
                     <td>{formatDateTimeFull(r.end_time)}</td>
                     <td>{formatMinutes(r.planned_minutes)}</td>
-                    <td>{formatBaht(r.fee_paid)}</td>
+                    <td>{formatBaht(r.fee_paid ?? r.amount ?? r.price ?? 0)}</td>
                     <td>
                       <span className={`status-pill ${r.status === 'completed' ? 'ok' : 'danger'}`}>
                         {STATUS_LABEL[r.status] || r.status}
@@ -185,7 +125,7 @@ export default function UserHistory({ user, active }) {
             <SquirclePagination
               currentPage={activePage}
               totalPages={totalPages}
-              totalItems={visible.length}
+              totalItems={rows.length}
               pageSize={pageSize}
               pageSizeOptions={[5, 10, 20]}
               onPageChange={setPage}

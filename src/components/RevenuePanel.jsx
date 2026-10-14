@@ -1,17 +1,48 @@
+/**
+ * =========================================================================================
+ * ไฟล์: src/components/RevenuePanel.jsx (แผงรายงานรายได้และสรุปยอดการชำระเงินสำหรับ Admin)
+ * -----------------------------------------------------------------------------------------
+ * หน้าที่หลักของคอมโพเนนต์นี้:
+ * 1. แสดงการ์ดสรุปยอดรายได้ (Revenue Summary Cards):
+ *    - รายได้วันนี้ (today)
+ *    - รายได้เดือนนี้ (this_month)
+ *    - รายได้สะสมทั้งหมด (total)
+ *    - จำนวนรายการชำระเงินทั้งหมด (total_bookings)
+ * 2. ตัวกรองช่วงเวลา (Period Filter): สรุปตาม 'รายวัน' (daily), 'รายเดือน' (monthly), หรือ 'รายปี' (yearly)
+ * 3. ตารางแจกแจงรายได้ตามขนาดตู้:
+ *    - จำนวนรายการ, รายได้จากตู้เล็ก (small), ตู้กลาง (medium), ตู้ใหญ่ (large), รายได้รวม, และยอดที่ยกเลิก
+ * 4. ตารางประวัติรายการชำระเงินล่าสุด (Recent Transactions):
+ *    - แสดงเวลา, ชื่อผู้ใช้งาน (@username), หมายเลขตู้และขนาด, ยอดเงิน, และสถานะการชำระ
+ * 
+ * การดึงข้อมูลและเชื่อมโยง (Data Flow):
+ * - API Endpoint:
+ *   - `GET /admin/revenue?period={period}&user_id={adminId}` (ดำเนินการโดย admin.controller.js)
+ * - Props:
+ *   - `adminId`: รหัสผู้ดูแลระบบ (user_id ของ admin เพื่อตรวจสอบสิทธิ์)
+ *   - `active`: สถานะว่าแท็บนี้กำลังถูกเปิดอยู่หรือไม่ (หาก true จะทำการ fetch ข้อมูลใหม่ทันที)
+ * =========================================================================================
+ */
+
 import { useCallback, useEffect, useState } from 'react';
 import { getJSON } from '../api';
 import { formatBaht, formatDateTimeFull } from '../utils/format';
 
+// ป้ายกำกับภาษาไทยสำหรับขนาดตู้, สถานะการจอง, และหัวตารางช่วงเวลา
 const SIZE_LABEL = { small: 'เล็ก', medium: 'กลาง', large: 'ใหญ่' };
 const STATUS_LABEL = { active: 'ใช้งาน/รอใช้', completed: 'คืนตู้แล้ว', cancelled: 'ยกเลิก' };
 const PERIOD_HEAD = { daily: 'วันที่', monthly: 'เดือน', yearly: 'ปี' };
 
-// ประวัติรายได้ (admin) — สรุปตามวัน/เดือน/ปี + รายการชำระเงินล่าสุด
 export default function RevenuePanel({ adminId, active }) {
+  // สถานะการเลือกช่วงเวลา (daily, monthly, yearly)
   const [period, setPeriod] = useState('daily');
+  // ข้อมูลรายได้ที่ได้จาก Backend API
   const [data, setData] = useState(null);
+  // สถานะการโหลดข้อมูล: 'loading' | 'ok' | 'error'
   const [state, setState] = useState('loading');
 
+  /**
+   * ฟังก์ชันดึงข้อมูลสรุปรายได้จาก Backend ผ่าน API /admin/revenue
+   */
   const load = useCallback(async () => {
     try {
       const json = await getJSON(`/admin/revenue?period=${period}&user_id=${adminId}`);
@@ -23,6 +54,7 @@ export default function RevenuePanel({ adminId, active }) {
     }
   }, [period, adminId]);
 
+  // เมื่อคอมโพเนนต์ถูกเปิดใช้งาน (active = true) หรือเมื่อ period เปลี่ยน จะโหลดข้อมูลใหม่
   useEffect(() => {
     if (active) load();
   }, [active, load]);
@@ -33,6 +65,7 @@ export default function RevenuePanel({ adminId, active }) {
 
   return (
     <div>
+      {/* ส่วนหัวข้อหลักของแผงรายได้ */}
       <div className="section-label">
         <span>
           <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -45,6 +78,7 @@ export default function RevenuePanel({ adminId, active }) {
         <div className="rule" />
       </div>
 
+      {/* การ์ดสถิติสรุปยอดเงิน 4 ช่อง (วันนี้ / เดือนนี้ / สะสม / จำนวนรายการ) */}
       {data && (
         <div className="stats admin">
           <div className="stat ok"><div className="num">{data.summary.today.toLocaleString('th-TH')}</div><div className="label">รายได้วันนี้ (บาท)</div></div>
@@ -54,6 +88,7 @@ export default function RevenuePanel({ adminId, active }) {
         </div>
       )}
 
+      {/* แถบตัวเลือกช่วงเวลา (รายวัน / รายเดือน / รายปี) */}
       <div className="filter-row">
         <select value={period} onChange={(e) => setPeriod(e.target.value)} aria-label="ช่วงเวลา">
           <option value="daily">รายวัน</option>
@@ -63,6 +98,7 @@ export default function RevenuePanel({ adminId, active }) {
         <span className="hint">รายได้ไม่รวมรายการที่ยกเลิก (แสดงแยกเป็นคอลัมน์ "ยกเลิก")</span>
       </div>
 
+      {/* ตารางแสดงการแจกแจงรายได้ตามช่วงเวลาและขนาดตู้ */}
       <div className="table-wrap">
         <table>
           <thead>
@@ -93,7 +129,10 @@ export default function RevenuePanel({ adminId, active }) {
         </table>
       </div>
 
+      {/* ส่วนหัวข้อตารางรายการชำระเงินล่าสุด */}
       <div className="section-label"><span>รายการชำระเงินล่าสุด</span><div className="rule" /></div>
+      
+      {/* ตารางแสดงรายละเอียดธุรกรรมการชำระเงินล่าสุด 10 รายการ */}
       <div className="table-wrap">
         <table>
           <thead>
@@ -119,3 +158,4 @@ export default function RevenuePanel({ adminId, active }) {
     </div>
   );
 }
+

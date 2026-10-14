@@ -1362,122 +1362,13 @@ export default function HomePage() {
 
       {/* ==================================================================
           ส่วนแสดงผลในแท็บ: ประวัติการใช้งาน (History Tab View)
-          แบ่งออกเป็น 2 ส่วนหลัก:
-          1. ประวัติการจองตู้ในอดีต (<UserHistory />): ดึงจาก API `/my-history?user_id=...`
-             แสดงตารางรายการจองที่เสร็จสิ้น/ยกเลิกแล้ว พร้อมยอดเงินและเวลารวม
-          2. บันทึกเหตุการณ์ทั้งหมด (Event Logs): ดึงจาก API `/logs?user_id=...`
-             แสดงบันทึกการกระทำทีละขั้นตอน (Action เช่น จอง, ปลดล็อก, คืน, PIN ผิด)
+          แสดงตารางรายการจองตู้ในอดีตทั้งหมดของผู้ใช้ (<UserHistory />)
           ================================================================== */}
-
-      {/* ส่วนที่ 1: รายการประวัติการจองตู้ในอดีต (User History Component) */}
       {page === 'history' && currentUser && (
         <UserHistory user={currentUser} active={page === 'history'} />
       )}
 
-      {/* ส่วนที่ 2: บันทึกเหตุการณ์การทำรายการทั้งหมด (Event Logs Section) */}
-      {page === 'history' && (
-        <div className="history-section">
-          <div className="section-label">
-            <span><IconHistory /> บันทึกเหตุการณ์ทั้งหมด (Event Logs)</span>
-            <div className="rule" />
-          </div>
 
-          {/* แถบตัวกรองประวัติการใช้งาน: กรองตามประเภทเหตุการณ์, ค้นหาตู้, และปุ่มรีเฟรช */}
-          <div className="history-filter-row">
-            <select
-              value={historyFilterAction}
-              onChange={(e) => {
-                setHistoryFilterAction(e.target.value);
-                setHistoryPage(1);
-              }}
-              aria-label="กรองประเภทเหตุการณ์"
-            >
-              <option value="">ทุกเหตุการณ์ ({myLogs.length})</option>
-              <option value="book">จองตู้</option>
-              <option value="open">ปลดล็อกตู้</option>
-              <option value="close">คืนตู้</option>
-              <option value="wrong_pin">กรอก PIN ผิด</option>
-              <option value="admin_release">Admin ปล่อยตู้</option>
-              <option value="relocate">ย้ายตู้</option>
-            </select>
-
-            <input
-              type="text"
-              placeholder="ค้นหาตามหมายเลขตู้ เช่น A1..."
-              value={historySearch}
-              onChange={(e) => {
-                setHistorySearch(e.target.value);
-                setHistoryPage(1);
-              }}
-              style={{ maxWidth: 220 }}
-            />
-
-            <button
-              type="button"
-              className="btn ghost small"
-              disabled={myLogsLoading}
-              onClick={loadMyLogs}
-              title="รีเฟรชประวัติการใช้งาน"
-            >
-              <IconRefresh style={{ width: 13, height: 13, verticalAlign: 'middle', marginRight: 4 }} />
-              {myLogsLoading ? 'กำลังโหลด...' : 'รีเฟรช'}
-            </button>
-          </div>
-
-          {/* ตารางแสดงรายการประวัติการใช้งาน */}
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>วันที่และเวลา</th>
-                  <th>ตู้ล็อกเกอร์</th>
-                  <th>เหตุการณ์</th>
-                </tr>
-              </thead>
-              <tbody>
-                {!currentUser ? (
-                  <tr><td colSpan={3} className="empty">กรุณาเข้าสู่ระบบก่อนเพื่อดูประวัติการใช้งาน</td></tr>
-                ) : myLogsError ? (
-                  <tr><td colSpan={3} className="empty">เชื่อมต่อ API ไม่ได้ หรือเกิดข้อผิดพลาดในการโหลด</td></tr>
-                ) : myLogsLoading && myLogs.length === 0 ? (
-                  <tr><td colSpan={3} className="empty">กำลังโหลดประวัติการใช้งาน...</td></tr>
-                ) : filteredUserLogs.length === 0 ? (
-                  <tr><td colSpan={3} className="empty">ไม่มีประวัติการใช้งาน{historyFilterAction || historySearch ? ' ที่ตรงกับเงื่อนไขการค้นหา' : ''}</td></tr>
-                ) : (
-                  paginatedUserLogs.map((log, idx) => (
-                    <tr key={log.log_id || idx}>
-                      <td data-label="วันที่และเวลา">
-                        <span className="log-time">{formatFullDateTime(log.timestamp)}</span>
-                      </td>
-                      <td data-label="ตู้ล็อกเกอร์">
-                        <b className="log-locker-badge">{log.locker_number || '–'}</b>
-                      </td>
-                      <td data-label="เหตุการณ์">
-                        <span className={`badge ${log.action}`}>
-                          {ACTION_LABEL[log.action] || log.action}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-          {filteredUserLogs.length > 0 && (
-            <SquirclePagination
-              currentPage={activeHistoryPage}
-              totalPages={totalHistoryPages}
-              onPageChange={(p) => setHistoryPage(p)}
-              totalItems={filteredUserLogs.length}
-              pageSize={historyPageSize}
-              onPageSizeChange={(s) => {
-                setHistoryPageSize(s);
-                setHistoryPage(1);
-              }}
-            />
-          )}
-        </div>
-      )}
       </main>
 
       {/* แถบเมนูด้านล่างสำหรับจอมือถือ (Bottom App Nav — แสดง 3 เมนูหลัก) */}
