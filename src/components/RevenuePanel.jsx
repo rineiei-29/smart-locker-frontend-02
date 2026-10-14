@@ -33,7 +33,17 @@ export default function RevenuePanel({ adminId, active }) {
 
   return (
     <div>
-      <div className="section-label"><span>ประวัติรายได้</span><div className="rule" /></div>
+      <div className="section-label">
+        <span>
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+            <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+            <path d="M18 12a2 2 0 0 0 0 4h3v-4Z" />
+          </svg>
+          ประวัติรายได้และสรุปยอดการชำระเงิน
+        </span>
+        <div className="rule" />
+      </div>
 
       {data && (
         <div className="stats admin">

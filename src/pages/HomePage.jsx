@@ -1,3 +1,41 @@
+/**
+ * =========================================================================================
+ * ไฟล์: src/pages/HomePage.jsx (User Portal & Main Locker Dashboard)
+ * -----------------------------------------------------------------------------------------
+ * หน้าที่หลัก:
+ * - หน้าเว็บหลักสำหรับผู้ใช้งานทั่วไป (User App) ของระบบตู้ล็อกเกอร์อัจฉริยะ
+ * - ฟังก์ชันหลัก:
+ *   1) สมัครสมาชิก / เข้าสู่ระบบ (Authentication) บันทึกลง localStorage 'locker_user'
+ *   2) แสดงรายการตู้ล็อกเกอร์และสถานะแบบเรียลไทม์ (Polling ทุก 5 วินาที)
+ *   3) เลือกเวลาและจองตู้ล็อกเกอร์ (ทั้งแบบใช้งานทันที และจองล่วงหน้าได้สูงสุด 7 วัน)
+ *   4) ระบบจำลองการชำระเงินด้วย QR Code (Payment Session)
+ *   5) แสดงรหัส PIN และจำลองการกด PIN เปิดตู้ / คืนตู้
+ *   6) จัดการการจองของฉัน (ปลดล็อก, คืนตู้, จัดการกรณีย้ายตู้ฉุกเฉิน)
+ *   7) ระบบแจ้งเตือน Notification Center (เตือนก่อนเริ่ม 10 น. และก่อนหมดเวลา 10 น.)
+ * 
+ * การดึงข้อมูลและเชื่อมโยง (Data Sources & Dependencies):
+ * - API Client:
+ *   - `../api.js`: ฟังก์ชัน getJSON, postJSON, request เพื่อยิงไปยัง Backend
+ * - API Endpoints ที่เรียกใช้งานในไฟล์นี้:
+ *   - `GET /lockers`: ดึงรายการตู้ทั้งหมดและสถานะว่าง/ไม่ว่าง
+ *   - `GET /my-bookings?user_id=...`: ดึงรายการจองปัจจุบันที่กำลังใช้งาน (Active Bookings)
+ *   - `GET /logs?user_id=...`: ดึงบันทึกเหตุการณ์การใช้งานของตนเอง (Event Logs)
+ *   - `POST /payment-sessions`: สร้างเซสชันการชำระเงินก่อนจอง
+ *   - `POST /payment-sessions/:id/confirm`: ยืนยันการชำระเงินและบันทึกการจองสำเร็จ
+ *   - `POST /pin/open`: จำลองการกรอก PIN ปลดล็อกตู้
+ *   - `POST /pin/close`: จำลองการกรอก PIN คืนตู้
+ *   - `POST /batch-action`: ปลดล็อกหรือคืนตู้โดยตรงผ่านแอปโดยไม่ต้องกรอก PIN ซ้ำ
+ * - คอมโพเนนต์ที่นำเข้ามาใช้งาน (Imported Components):
+ *   - `../components/NotificationCenter.jsx`: ปุ่มกระดิ่งแจ้งเตือนบน Topbar และ Toast ลอย
+ *   - `../components/UserHistory.jsx`: ตารางประวัติการจองในอดีต (ดึงจาก /my-history)
+ *   - `../components/SquirclePagination.jsx`: ระบบเปลี่ยนหน้าตารางประวัติเหตุการณ์
+ *   - `../components/RelocationModal.jsx`: หน้าต่างแจ้งเตือนและย้ายตู้กรณีตู้เดิมติดปัญหา
+ * - ยูทิลิตี้ (Utilities):
+ *   - `../utils/format.js`: แปลงเวลา, ค่าเงิน, ข้อความสถานะ
+ *   - `../utils/time.js`: จัดการวันเวลาตามเวลาประเทศไทย (Asia/Bangkok)
+ * =========================================================================================
+ */
+
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
@@ -12,8 +50,9 @@ import {
   clampToNow,
 } from '../utils/time';
 import RelocationModal from '../components/RelocationModal';
-
 import UserHistory from '../components/UserHistory';
+import SquirclePagination from '../components/SquirclePagination';
+import NotificationCenter from '../components/NotificationCenter';
 
 
 
@@ -160,17 +199,6 @@ function phaseGroup(phase) {
 
 }
 
-function IconHistory(props) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
-      <path d="M3 3v5h5" />
-      <path d="M12 7v5l3 2" />
-    </svg>
-  );
-
-}
-
 function bookingPhase(b) {
   const now = Date.now();
   const start = new Date(b.start_time).getTime();
@@ -213,6 +241,8 @@ export default function HomePage() {
   const [myLogsError, setMyLogsError] = useState(false); // สถานะโหลดประวัติไม่สำเร็จ
   const [historyFilterAction, setHistoryFilterAction] = useState(''); // กรองตามประเภทเหตุการณ์ เช่น book, open, close
   const [historySearch, setHistorySearch] = useState(''); // ค้นหาหมายเลขตู้ในประวัติ
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyPageSize, setHistoryPageSize] = useState(10);
 
   // ---------------- booking (จองตรง) ----------------
   const [selectedMinutes, setSelectedMinutes] = useState({}); // { [locker_id]: minutes }
@@ -629,8 +659,8 @@ export default function HomePage() {
   }
 
   // ---------------- pin input (open / close) ----------------
-  function openPinModal(booking_id, action) {
-    setPendingAction({ booking_id, action });
+  function openPinModal(booking_id, action, locker_number) {
+    setPendingAction({ booking_id, action, locker_number });
     setPinInputValue('');
     setPinInputMsg(null);
     setPinInputOverlay(true);
@@ -672,12 +702,17 @@ export default function HomePage() {
 
       setPinInputOverlay(false);
       const wasClose = pendingAction.action === 'close';
+      const lockerNum = pendingAction.locker_number || '';
       setPendingAction(null);
       loadLockers();
       loadMyBookings();
+      loadMyLogs();
 
       if (wasClose) {
-        setReturnResult({ title: 'คืนตู้สำเร็จ', desc: 'ขอบคุณที่ใช้บริการ' });
+        setReturnResult({ title: 'คืนตู้สำเร็จ', desc: lockerNum ? `คืนตู้ ${lockerNum} เรียบร้อยแล้ว ขอบคุณที่ใช้บริการ` : 'ขอบคุณที่ใช้บริการ' });
+        setReturnResultOverlay(true);
+      } else {
+        setReturnResult({ title: 'ปลดล็อกตู้สำเร็จ', desc: lockerNum ? `ปลดล็อกตู้ ${lockerNum} เรียบร้อยแล้ว สามารถเปิดใช้งานได้เลย` : 'เปิดตู้ล็อกเกอร์เรียบร้อยแล้ว' });
         setReturnResultOverlay(true);
       }
     } catch (err) {
@@ -791,6 +826,13 @@ export default function HomePage() {
     }
     return list;
   }, [myLogs, historyFilterAction, historySearch]);
+
+  const totalHistoryPages = Math.max(1, Math.ceil(filteredUserLogs.length / historyPageSize));
+  const activeHistoryPage = Math.min(Math.max(1, historyPage), totalHistoryPages);
+  const paginatedUserLogs = useMemo(() => {
+    const start = (activeHistoryPage - 1) * historyPageSize;
+    return filteredUserLogs.slice(start, start + historyPageSize);
+  }, [filteredUserLogs, activeHistoryPage, historyPageSize]);
 
   if (currentUser?.role === 'admin') {
     return null; // กำลัง redirect ไป /admin ผ่าน useEffect ด้านบน ไม่ต้องโชว์หน้านี้แม้แต่แวบเดียว
@@ -945,12 +987,37 @@ export default function HomePage() {
             </button>
             <div className="topbar-title-group">
               <span className="topbar-breadcrumb">
-                {page === 'all' ? 'ตู้ล็อกเกอร์ทั้งหมด' : page === 'mine' ? 'ตู้ของฉัน' : 'ประวัติการใช้งาน'}
+                {page === 'all' ? 'หน้าหลัก · เลือกจองตู้' : page === 'mine' ? 'ตู้ที่กำลังใช้งานและจองไว้' : 'ประวัติและบันทึกเหตุการณ์'}
               </span>
-              <h1 className="topbar-main-title">ระบบตู้รับฝากของอัจฉริยะ</h1>
+              <div className="topbar-title-row">
+                <span className="topbar-page-icon">
+                  {page === 'all' && <IconLockers />}
+                  {page === 'mine' && <IconTicket />}
+                  {page === 'history' && <IconHistory />}
+                </span>
+                <h1 className="topbar-main-title">
+                  {page === 'all' ? 'ตู้ล็อกเกอร์ทั้งหมด' : page === 'mine' ? 'ตู้ของฉัน' : 'ประวัติการใช้งาน'}
+                </h1>
+              </div>
             </div>
           </div>
           <div className="topbar-right">
+            {/* ==================================================================
+                ระบบแจ้งเตือนสำหรับผู้ใช้งาน (Smart Locker Notification System)
+                เงื่อนไข:
+                1) แจ้งเตือนก่อนถึงเวลาจอง 10 นาที (สำหรับการจองล่วงหน้า)
+                2) แจ้งเตือนก่อนหมดเวลาจอง/ใช้งาน 10 นาที
+                ================================================================== */}
+            {currentUser && (
+              <NotificationCenter
+                bookings={myBookings}
+                currentUser={currentUser}
+                onNavigateMine={() => {
+                  setPage('mine');
+                  if (window.innerWidth < 900) setSidebarOpen(false);
+                }}
+              />
+            )}
             <span className="updated-badge">{updatedAt}</span>
             <button
               type="button"
@@ -968,7 +1035,9 @@ export default function HomePage() {
           </div>
         </header>
 
-      <div className="panel">
+        {/* พื้นที่แสดงผลข้อมูลหลัก (Main Body Container) */}
+        <main className="main-body">
+          <div className="panel">
         {!currentUser ? (
           <div>
             <h2>{isRegisterMode ? 'สมัครสมาชิกใหม่' : 'เข้าสู่ระบบเพื่อจองตู้'}</h2>
@@ -1023,17 +1092,6 @@ export default function HomePage() {
         )}
       </div>
 
-      {currentUser && (
-        <div className="tabs page-tabs" role="tablist">
-          <button role="tab" aria-selected={page === 'all'} className={`tab-btn ${page === 'all' ? 'active' : ''}`} onClick={() => setPage('all')}>
-            ตู้ทั้งหมด
-          </button>
-          <button role="tab" aria-selected={page === 'mine'} className={`tab-btn ${page === 'mine' ? 'active' : ''}`} onClick={() => setPage('mine')}>
-            ตู้ของฉัน{myBookings.length > 0 && <span className="tab-count">{myBookings.length}</span>}
-          </button>
-        </div>
-      )}
-
       {page === 'all' && (<>
       <div className="stats">
         <div className="stat"><div className="num">{statTotal || '–'}</div><div className="label">ตู้ทั้งหมด</div></div>
@@ -1041,7 +1099,7 @@ export default function HomePage() {
         <div className="stat danger"><div className="num">{statInUse || '–'}</div><div className="label">กำลังใช้งาน</div></div>
       </div>
 
-      <div id="lockers" className="section-label"><span>ผังตู้ล็อกเกอร์ — เลือกขนาดที่ต้องการ</span><div className="rule" /></div>
+      <div id="lockers" className="section-label"><span><IconLockers /> ผังตู้ล็อกเกอร์ — เลือกขนาดและวิธีจอง</span><div className="rule" /></div>
       <div className="grid">
         {lockersError ? (
           <div className="empty">เชื่อมต่อ API ไม่ได้ ตรวจสอบว่า server กำลังรันอยู่หรือไม่</div>
@@ -1164,7 +1222,7 @@ export default function HomePage() {
       </>)}
 
       {page === 'mine' && (<>
-      <div id="my-bookings" className="section-label"><span>รายการจองของฉัน</span><div className="rule" /></div>
+      <div id="my-bookings" className="section-label"><span><IconTicket /> รายการจองของฉัน — ตู้ที่กำลังใช้งานและจองไว้</span><div className="rule" /></div>
       <div>
         {!currentUser ? (
           <div className="empty">เข้าสู่ระบบก่อนเพื่อดูรายการจองของคุณ</div>
@@ -1262,8 +1320,6 @@ export default function HomePage() {
                             {new Date(b.start_time).getTime() > Date.now()
                               ? 'ผู้ใช้คนก่อนยังไม่นำของออกและเลยเวลาแล้ว · อาจใช้ตู้นี้ไม่ได้ตามเวลาที่จอง'
                               : 'ถึงเวลาของคุณแล้ว แต่ผู้ใช้คนก่อนยังไม่นำของออก · ยังเปิดตู้นี้ไม่ได้'}
-                            ถึงเวลาของคุณแล้ว แต่ผู้ใช้คนก่อนยังไม่นำของออก · ยังเปิดตู้นี้ไม่ได้
-
                           </span>
                         ) : phase === 'overdue' ? (
                           <span style={{ color: 'var(--danger)', fontSize: 12 }}>
@@ -1283,14 +1339,11 @@ export default function HomePage() {
                           <span className="wait-note">เปิดใช้ได้เมื่อถึงเวลา</span>
                         ) : (
                           <>
-                            <button className="btn primary" disabled={batchBusy} onClick={() => handleBatchAction('open', [b.booking_id])}>
+                            <button className="btn primary" disabled={batchBusy} onClick={() => openPinModal(b.booking_id, 'open', b.locker_number)}>
                               ปลดล็อกตู้
                             </button>
                             <button className="btn ghost" disabled={batchBusy} onClick={() => handleBatchAction('close', [b.booking_id])}>
                               คืนตู้ (ว่าง)
-                            </button>
-                            <button className="btn-link-small" onClick={() => openPinModal(b.booking_id, 'open')}>
-                              กรอก PIN ที่ตู้เอง (จำลอง)
                             </button>
                           </>
                         )}
@@ -1307,16 +1360,25 @@ export default function HomePage() {
       </>)}
 
 
-      {page === 'history' && currentUser && <UserHistory user={currentUser} active={page === 'history'} />}
-
-
       {/* ==================================================================
-          ส่วนแสดงผล: ประวัติการใช้งาน (Usage History View)
+          ส่วนแสดงผลในแท็บ: ประวัติการใช้งาน (History Tab View)
+          แบ่งออกเป็น 2 ส่วนหลัก:
+          1. ประวัติการจองตู้ในอดีต (<UserHistory />): ดึงจาก API `/my-history?user_id=...`
+             แสดงตารางรายการจองที่เสร็จสิ้น/ยกเลิกแล้ว พร้อมยอดเงินและเวลารวม
+          2. บันทึกเหตุการณ์ทั้งหมด (Event Logs): ดึงจาก API `/logs?user_id=...`
+             แสดงบันทึกการกระทำทีละขั้นตอน (Action เช่น จอง, ปลดล็อก, คืน, PIN ผิด)
           ================================================================== */}
+
+      {/* ส่วนที่ 1: รายการประวัติการจองตู้ในอดีต (User History Component) */}
+      {page === 'history' && currentUser && (
+        <UserHistory user={currentUser} active={page === 'history'} />
+      )}
+
+      {/* ส่วนที่ 2: บันทึกเหตุการณ์การทำรายการทั้งหมด (Event Logs Section) */}
       {page === 'history' && (
         <div className="history-section">
           <div className="section-label">
-            <span>ประวัติการใช้งานตู้ล็อกเกอร์ของคุณ</span>
+            <span><IconHistory /> บันทึกเหตุการณ์ทั้งหมด (Event Logs)</span>
             <div className="rule" />
           </div>
 
@@ -1324,7 +1386,10 @@ export default function HomePage() {
           <div className="history-filter-row">
             <select
               value={historyFilterAction}
-              onChange={(e) => setHistoryFilterAction(e.target.value)}
+              onChange={(e) => {
+                setHistoryFilterAction(e.target.value);
+                setHistoryPage(1);
+              }}
               aria-label="กรองประเภทเหตุการณ์"
             >
               <option value="">ทุกเหตุการณ์ ({myLogs.length})</option>
@@ -1340,7 +1405,10 @@ export default function HomePage() {
               type="text"
               placeholder="ค้นหาตามหมายเลขตู้ เช่น A1..."
               value={historySearch}
-              onChange={(e) => setHistorySearch(e.target.value)}
+              onChange={(e) => {
+                setHistorySearch(e.target.value);
+                setHistoryPage(1);
+              }}
               style={{ maxWidth: 220 }}
             />
 
@@ -1376,7 +1444,7 @@ export default function HomePage() {
                 ) : filteredUserLogs.length === 0 ? (
                   <tr><td colSpan={3} className="empty">ไม่มีประวัติการใช้งาน{historyFilterAction || historySearch ? ' ที่ตรงกับเงื่อนไขการค้นหา' : ''}</td></tr>
                 ) : (
-                  filteredUserLogs.map((log, idx) => (
+                  paginatedUserLogs.map((log, idx) => (
                     <tr key={log.log_id || idx}>
                       <td data-label="วันที่และเวลา">
                         <span className="log-time">{formatFullDateTime(log.timestamp)}</span>
@@ -1395,9 +1463,21 @@ export default function HomePage() {
               </tbody>
             </table>
           </div>
+          {filteredUserLogs.length > 0 && (
+            <SquirclePagination
+              currentPage={activeHistoryPage}
+              totalPages={totalHistoryPages}
+              onPageChange={(p) => setHistoryPage(p)}
+              totalItems={filteredUserLogs.length}
+              pageSize={historyPageSize}
+              onPageSizeChange={(s) => {
+                setHistoryPageSize(s);
+                setHistoryPage(1);
+              }}
+            />
+          )}
         </div>
       )}
-
       </main>
 
       {/* แถบเมนูด้านล่างสำหรับจอมือถือ (Bottom App Nav — แสดง 3 เมนูหลัก) */}
@@ -1479,24 +1559,40 @@ export default function HomePage() {
       {/* Modal: กรอกรหัส PIN เพื่อเปิด/คืนตู้ */}
       <div className={`overlay ${pinInputOverlay ? 'show' : ''}`}>
         <div className="modal">
-          <h3>{pendingAction?.action === 'open' ? 'กรอกรหัส PIN เพื่อปลดล็อก' : 'กรอกรหัส PIN เพื่อคืนตู้'}</h3>
+          <h3>
+            {pendingAction?.action === 'open'
+              ? `กรอกรหัส PIN เพื่อปลดล็อกตู้${pendingAction?.locker_number ? ' ' + pendingAction.locker_number : ''}`
+              : `กรอกรหัส PIN เพื่อคืนตู้${pendingAction?.locker_number ? ' ' + pendingAction.locker_number : ''}`}
+          </h3>
           <p>
             {pendingAction?.action === 'open'
-              ? 'ยืนยันรหัสเพื่อเปิดตู้ฝากของ (ระบบจะบันทึก log ว่ามีการเปิดตู้)'
+              ? 'กรุณากรอกรหัส PIN 6 หลักเพื่อปลดล็อกเปิดตู้ล็อกเกอร์'
               : 'ยืนยันรหัสเพื่อคืนตู้ — ตู้จะกลับมาว่างให้คนอื่นจองต่อได้ทันที'}
           </p>
           <input
             type="text"
-            placeholder="เช่น 123456"
+            placeholder="• • • • • •"
             maxLength={6}
             value={pinInputValue}
-            onChange={(e) => setPinInputValue(e.target.value)}
+            onChange={(e) => setPinInputValue(e.target.value.replace(/\D/g, ''))}
+            style={{
+              textAlign: 'center',
+              fontSize: '22px',
+              letterSpacing: '6px',
+              fontFamily: "'IBM Plex Mono', monospace",
+              fontWeight: 600,
+            }}
+            autoFocus
           />
           {pinInputMsg && <div className={`msg ${pinInputMsg.type}`}>{pinInputMsg.text}</div>}
           <div className="modal-actions">
             <button className="btn ghost" onClick={handlePinInputCancel}>ยกเลิก</button>
             <button className="btn primary" disabled={pinInputBusy} onClick={handlePinInputConfirm}>
-              {pinInputBusy ? 'กำลังดำเนินการ...' : 'ยืนยัน'}
+              {pinInputBusy
+                ? 'กำลังตรวจสอบ...'
+                : pendingAction?.action === 'open'
+                ? 'ปลดล็อกตู้'
+                : 'ยืนยัน'}
             </button>
           </div>
         </div>
