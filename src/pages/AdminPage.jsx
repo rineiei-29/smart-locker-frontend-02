@@ -476,16 +476,7 @@ export default function AdminPage() {
   // 1. ตัวกรองสถานะตู้ (Filter: '' | 'available' | 'occupied' | 'maintenance')
   const [statusDrillFilter, setStatusDrillFilter] = useState('');
 
-  // 2. ข้อมูลตู้ล็อกเกอร์รายตู้ (Locker Detail Modal)
-  const [selectedLocker, setSelectedLocker] = useState(null);
-  const [lockerModalTab, setLockerModalTab] = useState('status'); // 'status' | 'history' | 'logs'
-  const [changingStatusBusy, setChangingStatusBusy] = useState(false);
-
-  // 3. ข้อมูลรายได้และธุรกรรม (Revenue Modal)
-  const [showRevenueDrilldown, setShowRevenueDrilldown] = useState(false);
-  const [revenueDrillPeriod, setRevenueDrillPeriod] = useState('all'); // 'all' | 'today' | 'month'
-
-  // 4. ข้อมูลผู้ใช้งาน (User Modal)
+  // 2. ข้อมูลผู้ใช้งาน (User Modal)
   const [showUserDrilldown, setShowUserDrilldown] = useState(false);
 
   // กรองตู้ตามการคลิกเลือกจากการ์ดสถิติด้านบน
@@ -508,86 +499,6 @@ export default function AdminPage() {
     }
     return lockers;
   }, [lockers, statusDrillFilter]);
-
-  // การจองที่กำลังใช้งานของตู้ที่เลือก (ถ้ามี)
-  const selectedLockerActiveBooking = useMemo(() => {
-    if (!selectedLocker) return null;
-    return bookings.find(
-      (b) =>
-        (b.locker_id === selectedLocker.locker_id || b.locker_number === selectedLocker.locker_number) &&
-        b.status === 'active'
-    );
-  }, [selectedLocker, bookings]);
-
-  // ประวัติการจองทั้งหมดของตู้ที่เลือก
-  const selectedLockerBookings = useMemo(() => {
-    if (!selectedLocker) return [];
-    return bookings.filter(
-      (b) =>
-        b.locker_id === selectedLocker.locker_id ||
-        b.locker_number === selectedLocker.locker_number
-    );
-  }, [selectedLocker, bookings]);
-
-  // บันทึกกิจกรรม (Logs) ทั้งหมดของตู้ที่เลือก
-  const selectedLockerLogs = useMemo(() => {
-    if (!selectedLocker) return [];
-    return allLogs.filter(
-      (l) =>
-        l.locker_number === selectedLocker.locker_number ||
-        l.locker_id === selectedLocker.locker_id
-    );
-  }, [selectedLocker, allLogs]);
-
-  // คำนวณแจกแจงรายได้ตามขนาดตู้
-  const revenueDrillBreakdown = useMemo(() => {
-    const now = new Date();
-    const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
-    const monthStr = todayStr.slice(0, 7);
-
-    let targetBookings = bookings;
-    if (revenueDrillPeriod === 'today') {
-      targetBookings = bookings.filter((b) => (b.created_at || b.start_time || '').slice(0, 10) === todayStr);
-    } else if (revenueDrillPeriod === 'month') {
-      targetBookings = bookings.filter((b) => (b.created_at || b.start_time || '').startsWith(monthStr));
-    }
-
-    const breakdown = {
-      small: { count: 0, sum: 0 },
-      medium: { count: 0, sum: 0 },
-      large: { count: 0, sum: 0 },
-    };
-
-    for (const b of targetBookings) {
-      const size = b.size || (lockers.find((l) => l.locker_id === b.locker_id)?.size) || 'medium';
-      const amt = Number(b.amount ?? b.price ?? 0) || 0;
-      if (breakdown[size]) {
-        breakdown[size].count += 1;
-        breakdown[size].sum += amt;
-      }
-    }
-
-    return { targetBookings, breakdown };
-  }, [bookings, lockers, revenueDrillPeriod]);
-
-  // ฟังก์ชันเปลี่ยนสถานะตู้จากใน Modal
-  async function handleModalLockerStatus(newStatus) {
-    if (!selectedLocker) return;
-    setChangingStatusBusy(true);
-    try {
-      await changeLocker(selectedLocker.locker_id, 'status', newStatus);
-      setSelectedLocker((prev) => (prev ? { ...prev, status: newStatus, display_status: newStatus } : null));
-    } finally {
-      setChangingStatusBusy(false);
-    }
-  }
-
-  // ฟังก์ชันปล่อยตู้ฉุกเฉินจากใน Modal
-  async function handleModalRelease(booking_id) {
-    if (!confirm('ยืนยันปล่อยตู้นี้? ตู้จะกลับเป็นสถานะว่างทันที')) return;
-    await releaseBooking(booking_id);
-    setSelectedLocker(null);
-  }
 
   if (!isAdmin) {
     return (
@@ -807,36 +718,15 @@ export default function AdminPage() {
           <div className="rule" />
         </div>
         <div className="revenue-stats">
-          <div
-            className="stat gold clickable-stat"
-            onClick={() => {
-              setShowRevenueDrilldown(true);
-              setRevenueDrillPeriod('all');
-            }}
-            title="คลิกเพื่อดูรายได้สะสมทั้งหมด"
-          >
+          <div className="stat gold">
             <div className="num">{(revenueSummary.total_revenue || 0).toLocaleString()} ฿</div>
             <div className="label">รายได้รวมสะสม</div>
           </div>
-          <div
-            className="stat ok clickable-stat"
-            onClick={() => {
-              setShowRevenueDrilldown(true);
-              setRevenueDrillPeriod('today');
-            }}
-            title="คลิกเพื่อดูรายได้วันนี้"
-          >
+          <div className="stat ok">
             <div className="num">{(revenueSummary.daily_revenue || 0).toLocaleString()} ฿</div>
             <div className="label">รายได้วันนี้</div>
           </div>
-          <div
-            className="stat warn clickable-stat"
-            onClick={() => {
-              setShowRevenueDrilldown(true);
-              setRevenueDrillPeriod('month');
-            }}
-            title="คลิกเพื่อดูรายได้เดือนนี้"
-          >
+          <div className="stat warn">
             <div className="num">{(revenueSummary.monthly_revenue || 0).toLocaleString()} ฿</div>
             <div className="label">รายได้เดือนนี้</div>
           </div>
@@ -895,13 +785,8 @@ export default function AdminPage() {
           ) : (
             displayedLockers.map((l) => (
               <div
-                className={`locker ${l.display_status || 'available'} clickable-locker`}
+                className={`locker ${l.display_status || 'available'}`}
                 key={l.locker_id}
-                onClick={() => {
-                  setSelectedLocker(l);
-                  setLockerModalTab('status');
-                }}
-                title={`คลิกเพื่อดูข้อมูลตู้ #${l.locker_number}`}
               >
                 <div className="dot" />
                 <div className="number">{l.locker_number}</div>
@@ -922,9 +807,6 @@ export default function AdminPage() {
                     เกินเวลาตั้งแต่ {formatDateTime(l.overdue_since)}
                   </div>
                 )}
-                <div className="locker-drill-badge">
-                  <span>ดูรายละเอียด</span>
-                </div>
               </div>
             ))
           )}
@@ -967,26 +849,10 @@ export default function AdminPage() {
                       .slice(0, 5)
                       .map((b) => {
                         const phase = bookingPhase(b);
-                        const targetLocker = lockers.find(
-                          (l) => l.locker_number === b.locker_number || l.locker_id === b.locker_id
-                        );
                         return (
                           <tr key={b.booking_id}>
                             <td data-label="ตู้">
-                              <button
-                                type="button"
-                                className="btn-link-small"
-                                style={{ fontWeight: 700, fontSize: 13.5, cursor: 'pointer' }}
-                                title="คลิกเพื่อดูรายละเอียดตู้นี้"
-                                onClick={() => {
-                                  if (targetLocker) {
-                                    setSelectedLocker(targetLocker);
-                                    setLockerModalTab('status');
-                                  }
-                                }}
-                              >
-                                {b.locker_number}
-                              </button>
+                              <b>{b.locker_number}</b>
                             </td>
                             <td data-label="ผู้จอง">{b.firstname} {b.lastname}</td>
                             <td data-label="ถึงเวลา">
@@ -1043,28 +909,11 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {allLogs.slice(0, 5).map((r, i) => {
-                      const targetLocker = lockers.find(
-                        (l) => l.locker_number === r.locker_number || l.locker_id === r.locker_id
-                      );
-                      return (
+                    {allLogs.slice(0, 5).map((r, i) => (
                         <tr key={r.log_id || i}>
                           <td data-label="เวลา">{formatClock(r.timestamp)}</td>
                           <td data-label="ตู้">
-                            <button
-                              type="button"
-                              className="btn-link-small"
-                              style={{ fontWeight: 700, fontSize: 13.5, cursor: 'pointer' }}
-                              title="คลิกเพื่อดูรายละเอียดตู้นี้"
-                              onClick={() => {
-                                if (targetLocker) {
-                                  setSelectedLocker(targetLocker);
-                                  setLockerModalTab('logs');
-                                }
-                              }}
-                            >
-                              {r.locker_number}
-                            </button>
+                            <b>{r.locker_number}</b>
                           </td>
                           <td data-label="ผู้ใช้งาน">{r.firstname} {r.lastname}</td>
                           <td data-label="เหตุการณ์">
@@ -1073,8 +922,7 @@ export default function AdminPage() {
                             </span>
                           </td>
                         </tr>
-                      );
-                    })}
+                      ))}
                   </tbody>
                 </table>
               </div>
@@ -1477,526 +1325,7 @@ export default function AdminPage() {
           3. Modals แสดงรายละเอียดบนแดชบอร์ด
           ================================================================== */}
 
-      {/* Modal 1: รายละเอียดตู้ล็อกเกอร์รายตู้ (Locker Detail) */}
-      {selectedLocker && (
-        <div className="drilldown-overlay" onClick={() => setSelectedLocker(null)}>
-          <div className="drilldown-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="drilldown-modal-header">
-              <div className="drilldown-modal-title-group">
-                <div
-                  className="dot"
-                  style={{
-                    background:
-                      selectedLocker.display_status === 'available'
-                        ? 'var(--ok)'
-                        : selectedLocker.display_status === 'occupied'
-                        ? 'var(--gold)'
-                        : selectedLocker.display_status === 'overdue'
-                        ? 'var(--danger)'
-                        : 'var(--muted)',
-                    width: 12,
-                    height: 12,
-                    borderRadius: '50%',
-                  }}
-                />
-                <h2 className="drilldown-modal-title">ตู้ล็อกเกอร์ #{selectedLocker.locker_number}</h2>
-                <span className={`pill ${selectedLocker.display_status || 'available'}`}>
-                  {DISPLAY_STATUS_LABEL[selectedLocker.display_status] || selectedLocker.display_status}
-                </span>
-                <span className="size-tag" style={{ margin: 0 }}>
-                  ขนาด{selectedLocker.size === 'small' ? 'เล็ก' : selectedLocker.size === 'medium' ? 'กลาง' : 'ใหญ่'}
-                </span>
-              </div>
-              <button
-                type="button"
-                className="sidebar-close-btn"
-                style={{ display: 'flex' }}
-                onClick={() => setSelectedLocker(null)}
-                title="ปิด"
-              >
-                <IconClose />
-              </button>
-            </div>
-
-            <div className="drilldown-modal-body">
-              {/* แท็บย่อยภายใน Modal ตู้ */}
-              <div className="drilldown-modal-tabs">
-                <button
-                  type="button"
-                  className={`drilldown-tab-btn ${lockerModalTab === 'status' ? 'active' : ''}`}
-                  onClick={() => setLockerModalTab('status')}
-                >
-                  สถานะ & การใช้งานปัจจุบัน
-                </button>
-                <button
-                  type="button"
-                  className={`drilldown-tab-btn ${lockerModalTab === 'history' ? 'active' : ''}`}
-                  onClick={() => setLockerModalTab('history')}
-                >
-                  ประวัติการจอง ({selectedLockerBookings.length})
-                </button>
-                <button
-                  type="button"
-                  className={`drilldown-tab-btn ${lockerModalTab === 'logs' ? 'active' : ''}`}
-                  onClick={() => setLockerModalTab('logs')}
-                >
-                  บันทึกกิจกรรม ({selectedLockerLogs.length})
-                </button>
-              </div>
-
-              {/* แท็บ 1: ข้อมูลสถานะปัจจุบันและการใช้งาน */}
-              {lockerModalTab === 'status' && (
-                <div>
-                  <div className="drilldown-info-card">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontWeight: 600, fontSize: 14 }}>ข้อมูลตู้ล็อกเกอร์</span>
-                      <span style={{ fontSize: 13, color: 'var(--muted)' }}>
-                        ตำแหน่ง: {selectedLocker.location || 'อาคาร 1'}
-                      </span>
-                    </div>
-                    <div className="drilldown-info-grid">
-                      <div className="drilldown-info-item">
-                        <span className="drilldown-info-label">หมายเลขตู้</span>
-                        <span className="drilldown-info-value">{selectedLocker.locker_number}</span>
-                      </div>
-                      <div className="drilldown-info-item">
-                        <span className="drilldown-info-label">ขนาดตู้</span>
-                        <span className="drilldown-info-value">
-                          {selectedLocker.size === 'small'
-                            ? 'เล็ก (15 ฿/ชม.)'
-                            : selectedLocker.size === 'medium'
-                            ? 'กลาง (20 ฿/ชม.)'
-                            : 'ใหญ่ (30 ฿/ชม.)'}
-                        </span>
-                      </div>
-                      <div className="drilldown-info-item">
-                        <span className="drilldown-info-label">สถานะปัจจุบัน</span>
-                        <span className="drilldown-info-value">
-                          {DISPLAY_STATUS_LABEL[selectedLocker.display_status] || selectedLocker.display_status}
-                        </span>
-                      </div>
-                      <div className="drilldown-info-item">
-                        <span className="drilldown-info-label">สถานะระบบ (Database)</span>
-                        <span className="drilldown-info-value">
-                          {selectedLocker.status === 'available'
-                            ? 'เปิดใช้งานปกติ'
-                            : selectedLocker.status === 'maintenance'
-                            ? 'ซ่อมบำรุง'
-                            : 'ปิดใช้งาน'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* ข้อมูลกรณีมีผู้ใช้งานจองอยู่อย่างต่อเนื่อง */}
-                  {selectedLockerActiveBooking ? (
-                    <div className="drilldown-info-card" style={{ borderColor: 'rgba(212, 160, 23, 0.4)' }}>
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          marginBottom: 10,
-                        }}
-                      >
-                        <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--gold)' }}>
-                          📌 กำลังถูกใช้งานโดยผู้ใช้
-                        </span>
-                        <span className="badge active">Active Booking</span>
-                      </div>
-                      <div className="drilldown-info-grid">
-                        <div className="drilldown-info-item">
-                          <span className="drilldown-info-label">ผู้ใช้งาน</span>
-                          <span className="drilldown-info-value">
-                            {selectedLockerActiveBooking.firstname} {selectedLockerActiveBooking.lastname}
-                          </span>
-                        </div>
-                        <div className="drilldown-info-item">
-                          <span className="drilldown-info-label">เบอร์โทรศัพท์</span>
-                          <span className="drilldown-info-value">
-                            {selectedLockerActiveBooking.phone_number || '–'}
-                          </span>
-                        </div>
-                        <div className="drilldown-info-item">
-                          <span className="drilldown-info-label">รหัสการจอง</span>
-                          <span className="drilldown-info-value">#{selectedLockerActiveBooking.booking_id}</span>
-                        </div>
-                        <div className="drilldown-info-item">
-                          <span className="drilldown-info-label">รหัส PIN ปลดล็อค</span>
-                          <div>
-                            <span className="drilldown-pin-box">
-                              🔑 {selectedLockerActiveBooking.pin_code || '–'}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="drilldown-info-item">
-                          <span className="drilldown-info-label">เวลาเริ่มใช้งาน</span>
-                          <span className="drilldown-info-value">
-                            {formatDateTime(selectedLockerActiveBooking.start_time)}
-                          </span>
-                        </div>
-                        <div className="drilldown-info-item">
-                          <span className="drilldown-info-label">เวลาสิ้นสุด</span>
-                          <span className="drilldown-info-value">
-                            {formatDateTime(selectedLockerActiveBooking.end_time)}
-                          </span>
-                        </div>
-                        <div className="drilldown-info-item">
-                          <span className="drilldown-info-label">ยอดค่าบริการ</span>
-                          <span className="drilldown-info-value" style={{ color: 'var(--gold)' }}>
-                            {selectedLockerActiveBooking.amount || selectedLockerActiveBooking.price || 0} ฿
-                          </span>
-                        </div>
-                        <div className="drilldown-info-item">
-                          <span className="drilldown-info-label">สถานะเวลา</span>
-                          <span className="drilldown-info-value">
-                            {bookingPhase(selectedLockerActiveBooking) === 'overdue' ? (
-                              <span style={{ color: 'var(--danger)' }}>
-                                ⚠️ เกินเวลา {formatElapsed(selectedLockerActiveBooking.end_time)}
-                              </span>
-                            ) : (
-                              <span style={{ color: 'var(--ok)' }}>อยู่ในเวลาจอง</span>
-                            )}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div style={{ marginTop: 16 }}>
-                        <button
-                          type="button"
-                          className="btn warn"
-                          style={{ width: '100%' }}
-                          onClick={() => handleModalRelease(selectedLockerActiveBooking.booking_id)}
-                        >
-                          ปล่อยตู้ฉุกเฉิน (Release Locker)
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="drilldown-info-card" style={{ textAlign: 'center', padding: '20px' }}>
-                      <span style={{ fontSize: 28, display: 'block', marginBottom: 8 }}>
-                        {selectedLocker.display_status === 'available' ? '✅' : '🛠️'}
-                      </span>
-                      <span style={{ fontWeight: 600, fontSize: 15 }}>
-                        {selectedLocker.display_status === 'available'
-                          ? 'ตู้ว่าง พร้อมให้บริการ'
-                          : 'ตู้อยู่ในสถานะปิดซ่อมบำรุง / ปิดใช้งาน'}
-                      </span>
-                      <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--muted)' }}>
-                        {selectedLocker.display_status === 'available'
-                          ? 'ไม่มีผู้ใช้งานอยู่ในขณะนี้ สมาชิกสามารถกดจองได้ทันที'
-                          : 'ตู้จะไม่เปิดให้สมาชิกกดจองจนกว่าจะเปลี่ยนสถานะเป็นเปิดใช้งาน'}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* สลับสถานะตู้ด่วนสำหรับ Admin */}
-                  <div className="drilldown-info-card">
-                    <span style={{ fontWeight: 600, fontSize: 13.5 }}>ปรับเปลี่ยนสถานะตู้ (Admin Control):</span>
-                    <div className="quick-status-group">
-                      <button
-                        type="button"
-                        className={`quick-status-btn ${selectedLocker.status === 'available' ? 'active' : ''}`}
-                        disabled={changingStatusBusy}
-                        onClick={() => handleModalLockerStatus('available')}
-                      >
-                        ✓ เปิดใช้งานปกติ (Available)
-                      </button>
-                      <button
-                        type="button"
-                        className={`quick-status-btn ${selectedLocker.status === 'maintenance' ? 'active' : ''}`}
-                        disabled={changingStatusBusy}
-                        onClick={() => handleModalLockerStatus('maintenance')}
-                      >
-                        🛠️ ปิดซ่อมบำรุง (Maintenance)
-                      </button>
-                      <button
-                        type="button"
-                        className={`quick-status-btn ${selectedLocker.status === 'unavailable' ? 'active' : ''}`}
-                        disabled={changingStatusBusy}
-                        onClick={() => handleModalLockerStatus('unavailable')}
-                      >
-                        ⛔ ปิดใช้งานชั่วคราว (Unavailable)
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* แท็บ 2: ประวัติการจองย้อนหลังของตู้นี้ */}
-              {lockerModalTab === 'history' && (
-                <div>
-                  {selectedLockerBookings.length === 0 ? (
-                    <div className="empty" style={{ padding: '30px 10px' }}>
-                      ยังไม่มีประวัติการจองสำหรับตู้นี้
-                    </div>
-                  ) : (
-                    <div className="table-wrap" style={{ margin: 0 }}>
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>รหัส</th>
-                            <th>ผู้จอง</th>
-                            <th>ช่วงเวลา</th>
-                            <th>ค่าบริการ</th>
-                            <th>สถานะ</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {selectedLockerBookings.map((b) => (
-                            <tr key={b.booking_id}>
-                              <td data-label="รหัส">#{b.booking_id}</td>
-                              <td data-label="ผู้จอง">
-                                {b.firstname} {b.lastname}
-                              </td>
-                              <td data-label="ช่วงเวลา">
-                                {formatDateTime(b.start_time)} - {formatClock(b.end_time)}
-                              </td>
-                              <td data-label="ค่าบริการ">{b.amount || b.price || 0} ฿</td>
-                              <td data-label="สถานะ">
-                                <span className={`badge ${b.status}`}>
-                                  {b.status === 'active'
-                                    ? 'กำลังใช้งาน'
-                                    : b.status === 'completed'
-                                    ? 'คืนแล้ว'
-                                    : 'ยกเลิก'}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* แท็บ 3: บันทึกกิจกรรมที่เกิดขึ้นกับตู้นี้ */}
-              {lockerModalTab === 'logs' && (
-                <div>
-                  {selectedLockerLogs.length === 0 ? (
-                    <div className="empty" style={{ padding: '30px 10px' }}>
-                      ยังไม่มีบันทึกกิจกรรมสำหรับตู้นี้
-                    </div>
-                  ) : (
-                    <div className="table-wrap" style={{ margin: 0 }}>
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>เวลา</th>
-                            <th>ผู้ใช้งาน</th>
-                            <th>เหตุการณ์</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {selectedLockerLogs.map((log, idx) => (
-                            <tr key={log.log_id || idx}>
-                              <td data-label="เวลา">{formatFullDateTime(log.timestamp)}</td>
-                              <td data-label="ผู้ใช้งาน">
-                                {log.firstname ? `${log.firstname} ${log.lastname}` : 'ระบบ'}
-                              </td>
-                              <td data-label="เหตุการณ์">
-                                <span className={`badge ${log.action}`}>
-                                  {ACTION_LABEL[log.action] || log.action}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="drilldown-modal-footer">
-              <button
-                type="button"
-                className="btn ghost small"
-                onClick={() => {
-                  setActiveTab('lockers');
-                  setSelectedLocker(null);
-                }}
-              >
-                ไปที่หน้าจัดการตู้ล็อกเกอร์ทั้งหมด →
-              </button>
-              <button
-                type="button"
-                className="btn primary small"
-                onClick={() => setSelectedLocker(null)}
-              >
-                ปิดหน้าต่าง
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal 2: ข้อมูลรายได้ (Revenue Overview) */}
-      {showRevenueDrilldown && (
-        <div className="drilldown-overlay" onClick={() => setShowRevenueDrilldown(false)}>
-          <div className="drilldown-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="drilldown-modal-header">
-              <div className="drilldown-modal-title-group">
-                <h2 className="drilldown-modal-title">ข้อมูลรายได้และธุรกรรม (Revenue Overview)</h2>
-                <span className="pill gold">
-                  {revenueDrillPeriod === 'today'
-                    ? 'รายได้วันนี้'
-                    : revenueDrillPeriod === 'month'
-                    ? 'รายได้เดือนนี้'
-                    : 'รายได้รวมสะสม'}
-                </span>
-              </div>
-              <button
-                type="button"
-                className="sidebar-close-btn"
-                style={{ display: 'flex' }}
-                onClick={() => setShowRevenueDrilldown(false)}
-                title="ปิด"
-              >
-                <IconClose />
-              </button>
-            </div>
-
-            <div className="drilldown-modal-body">
-              {/* ตัวเลือกช่วงเวลาดูรายได้ */}
-              <div className="drilldown-modal-tabs">
-                <button
-                  type="button"
-                  className={`drilldown-tab-btn ${revenueDrillPeriod === 'all' ? 'active' : ''}`}
-                  onClick={() => setRevenueDrillPeriod('all')}
-                >
-                  รายได้รวมสะสม ({(revenueSummary.total_revenue || 0).toLocaleString()} ฿)
-                </button>
-                <button
-                  type="button"
-                  className={`drilldown-tab-btn ${revenueDrillPeriod === 'today' ? 'active' : ''}`}
-                  onClick={() => setRevenueDrillPeriod('today')}
-                >
-                  รายได้วันนี้ ({(revenueSummary.daily_revenue || 0).toLocaleString()} ฿)
-                </button>
-                <button
-                  type="button"
-                  className={`drilldown-tab-btn ${revenueDrillPeriod === 'month' ? 'active' : ''}`}
-                  onClick={() => setRevenueDrillPeriod('month')}
-                >
-                  รายได้เดือนนี้ ({(revenueSummary.monthly_revenue || 0).toLocaleString()} ฿)
-                </button>
-              </div>
-
-              {/* แจกแจงตามขนาดตู้ */}
-              <div className="section-label" style={{ marginTop: 0 }}>
-                <span>สัดส่วนรายได้แยกตามขนาดตู้</span>
-                <div className="rule" />
-              </div>
-              <div className="revenue-breakdown-grid">
-                <div className="revenue-breakdown-card">
-                  <div className="revenue-breakdown-size">ตู้ขนาดเล็ก (Small)</div>
-                  <div className="revenue-breakdown-amt">
-                    {(revenueDrillBreakdown.breakdown.small.sum || 0).toLocaleString()} ฿
-                  </div>
-                  <div className="revenue-breakdown-count">
-                    {revenueDrillBreakdown.breakdown.small.count} ครั้ง
-                  </div>
-                </div>
-                <div className="revenue-breakdown-card">
-                  <div className="revenue-breakdown-size">ตู้ขนาดกลาง (Medium)</div>
-                  <div className="revenue-breakdown-amt">
-                    {(revenueDrillBreakdown.breakdown.medium.sum || 0).toLocaleString()} ฿
-                  </div>
-                  <div className="revenue-breakdown-count">
-                    {revenueDrillBreakdown.breakdown.medium.count} ครั้ง
-                  </div>
-                </div>
-                <div className="revenue-breakdown-card">
-                  <div className="revenue-breakdown-size">ตู้ขนาดใหญ่ (Large)</div>
-                  <div className="revenue-breakdown-amt">
-                    {(revenueDrillBreakdown.breakdown.large.sum || 0).toLocaleString()} ฿
-                  </div>
-                  <div className="revenue-breakdown-count">
-                    {revenueDrillBreakdown.breakdown.large.count} ครั้ง
-                  </div>
-                </div>
-              </div>
-
-              {/* รายการธุรกรรมการจองที่เกี่ยวข้อง */}
-              <div className="section-label">
-                <span>
-                  รายการธุรกรรมการจองที่เกี่ยวข้อง ({revenueDrillBreakdown.targetBookings.length} รายการ)
-                </span>
-                <div className="rule" />
-              </div>
-              {revenueDrillBreakdown.targetBookings.length === 0 ? (
-                <div className="empty" style={{ padding: '24px 10px' }}>
-                  ยังไม่มีรายการธุรกรรมในช่วงเวลานี้
-                </div>
-              ) : (
-                <div className="table-wrap" style={{ margin: 0, maxHeight: 280 }}>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>วันที่</th>
-                        <th>ตู้</th>
-                        <th>ผู้จอง</th>
-                        <th>ยอดเงิน</th>
-                        <th>สถานะ</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {revenueDrillBreakdown.targetBookings.slice(0, 20).map((b) => (
-                        <tr key={b.booking_id}>
-                          <td data-label="วันที่">{formatDateTime(b.start_time || b.created_at)}</td>
-                          <td data-label="ตู้">
-                            <b>{b.locker_number}</b>
-                          </td>
-                          <td data-label="ผู้จอง">
-                            {b.firstname} {b.lastname}
-                          </td>
-                          <td data-label="ยอดเงิน" style={{ fontWeight: 600, color: 'var(--gold)' }}>
-                            {(b.amount || b.price || 0).toLocaleString()} ฿
-                          </td>
-                          <td data-label="สถานะ">
-                            <span className={`badge ${b.status}`}>
-                              {b.status === 'active'
-                                ? 'ใช้งานอยู่'
-                                : b.status === 'completed'
-                                ? 'เสร็จสิ้น'
-                                : 'ยกเลิก'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-            <div className="drilldown-modal-footer">
-              <button
-                type="button"
-                className="btn ghost small"
-                onClick={() => {
-                  setActiveTab('reports');
-                  setShowRevenueDrilldown(false);
-                }}
-              >
-                ดูรายงานสรุปแบบละเอียด & กราฟ →
-              </button>
-              <button
-                type="button"
-                className="btn primary small"
-                onClick={() => setShowRevenueDrilldown(false)}
-              >
-                ปิดหน้าต่าง
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal 3: ข้อมูลผู้ใช้งานระบบ (User Overview) */}
+      {/* Modal: ข้อมูลผู้ใช้งานระบบ (User Overview) */}
       {showUserDrilldown && (
         <div className="drilldown-overlay" onClick={() => setShowUserDrilldown(false)}>
           <div className="drilldown-modal" onClick={(e) => e.stopPropagation()}>
